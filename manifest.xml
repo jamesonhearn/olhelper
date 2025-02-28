@@ -1,0 +1,19 @@
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+           xsi:type="MailApp">
+  <Id>your-unique-guid</Id>
+  <Version>1.0</Version>
+  <ProviderName>Microsoft</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName>Email Organizer</DisplayName>
+  <Description>Automatically moves emails based on TrackingID</Description>
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+  <Permissions>ReadWriteMailbox</Permissions>
+  <Rule xsi:type="RuleCollection" Mode="Or">
+    <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
+  </Rule>
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://olhelper-fdavdcg2fza6gcax.canadacentral-01.azurewebsites.net/index.html"/>
+  </DefaultSettings>
+</OfficeApp>
