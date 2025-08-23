@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xsi:type="MailApp">
+
+  <Id>f6b1a1c1-1111-4f11-8aa1-111111111111</Id>
+  <Version>1.0.0.0</Version>
+  <ProviderName>Case Filer</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  <DisplayName DefaultValue="Case Filer (Pilot)"/>
+  <Description DefaultValue="File messages by TrackingID and close cases."/>
+  <IconUrl DefaultValue="https://YOUR_HOST/web/icon64.png"/> <!--Replace -->
+  <HighResolutionIconUrl DefaultValue="https://YOUR_HOST/web/icon128.png"/> <!--Replace -->
+
+  <!-- Minimal permissions to read the currently selected item -->
+  <Permissions>ReadItem</Permissions>
+
+  <Hosts>
+    <Host Name="Mailbox"/>
+  </Hosts>
+
+  <Requirements>
+    <Sets DefaultMinVersion="1.8">
+      <Set Name="Mailbox"/>
+    </Sets>
+  </Requirements>
+
+  <!-- Domains your web app calls (host + login.microsoftonline.com + graph) -->
+  <AppDomains>
+    <AppDomain>YOUR_HOST</AppDomain> <!--Replace -->
+    <AppDomain>login.microsoftonline.com</AppDomain>
+    <AppDomain>graph.microsoft.com</AppDomain>
+    <AppDomain>secure.aadcdn.microsoftonline-p.com</AppDomain>
+  </AppDomains>
+
+  <Resources>
+    <bt:Images>
+      <bt:Image id="icon16" DefaultValue="https://YOUR_HOST/web/icon16.png"/> <!--Replace -->
+      <bt:Image id="icon32" DefaultValue="https://YOUR_HOST/web/icon32.png"/><!--Replace -->
+      <bt:Image id="icon80" DefaultValue="https://YOUR_HOST/web/icon80.png"/> <!--Replace -->
+    </bt:Images>
+    <bt:Urls>
+      <bt:Url id="TaskPaneUrl" DefaultValue="https://YOUR_HOST/web/taskpane.html"/> <!--Replace -->
+    </bt:Urls>
+    <bt:ShortStrings>
+      <bt:String id="groupLabel" DefaultValue="Case Filer"/>
+      <bt:String id="btnLabel"   DefaultValue="Open Case Filer"/>
+    </bt:ShortStrings>
+    <bt:LongStrings>
+      <bt:String id="btnDesc" DefaultValue="Detects TrackingID and files the message into Support Cases."/>
+    </bt:LongStrings>
+  </Resources>
+
+  <!-- Button on Message Read surface -->
+  <ExtensionPoint xsi:type="MessageReadCommandSurface">
+    <OfficeTab id="TabDefault">
+      <Group id="msgReadGroup">
+        <Label resid="groupLabel"/>
+        <Control xsi:type="Button" id="openTaskPaneBtn">
+          <Label resid="btnLabel"/>
+          <Supertip>
+            <Title resid="btnLabel"/>
+            <Description resid="btnDesc"/>
+          </Supertip>
+          <Icon>
+            <bt:Image id="icon16"/>
+            <bt:Image id="icon32"/>
+            <bt:Image id="icon80"/>
+          </Icon>
+          <Action xsi:type="ShowTaskpane">
+            <SourceLocation resid="TaskPaneUrl"/>
+          </Action>
+        </Control>
+      </Group>
+    </OfficeTab>
+  </ExtensionPoint>
+</OfficeApp>

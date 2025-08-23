@@ -1,0 +1,5 @@
+body { font-family: system-ui, Arial, sans-serif; margin: 16px; }
+#app { max-width: 640px; }
+.card { border: 1px solid #ddd; border-radius: 8px; padding: 12px; margin: 12px 0; }
+button { padding: 8px 12px; margin-top: 8px; }
+#log { background: #0b0b0b; color: #e6e6e6; padding: 8px; border-radius: 8px; min-height: 80px; }
