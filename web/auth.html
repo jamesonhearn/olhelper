@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Auth Redirect</title>
+  <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+  <script src="./msalConfig.js"></script>
+</head>
+<body>
+<script>
+  (async function() {
+    const app = new msal.PublicClientApplication(msalConfig);
+    await app.handleRedirectPromise();
+    // After handling redirect, this page can close itself if opened in a popup
+    if (window.opener && !window.opener.closed) {
+      window.close();
+    }
+  })();
+</script>
+Redirecting...
+</body>
+</html>

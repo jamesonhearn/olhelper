@@ -1,0 +1,42 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Case Filer</title>
+  <link rel="stylesheet" href="./styles.css"/>
+
+  <!-- Office.js -->
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+  <!-- MSAL (browser) -->
+  <script src="https://alcdn.msauth.net/browser/2.38.3/js/msal-browser.min.js"></script>
+
+  <script src="./msalConfig.js"></script>
+  <script defer src="./taskpane.js"></script>
+</head>
+<body>
+  <div id="app">
+    <h2>Case Filer</h2>
+
+    <div id="auth">
+      <button id="signinBtn">Sign in</button>
+      <span id="userSpan"></span>
+    </div>
+
+    <div class="card">
+      <h3>Current Message</h3>
+      <div>Subject: <span id="subjectSpan">–</span></div>
+      <div>Detected TrackingID: <span id="caseIdSpan">–</span></div>
+      <button id="fileBtn" disabled>File to Open Cases</button>
+    </div>
+
+    <div class="card">
+      <h3>Close Case</h3>
+      <input id="closeIdInput" type="text" placeholder="TrackingID (digits)"/>
+      <button id="closeBtn" disabled>Move Open → Closed</button>
+    </div>
+
+    <pre id="log"></pre>
+  </div>
+</body>
+</html>
