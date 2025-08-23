@@ -42,7 +42,7 @@
       <bt:Image id="icon80" DefaultValue="https://YOUR_HOST/web/icon80.png"/> <!--Replace -->
     </bt:Images>
     <bt:Urls>
-      <bt:Url id="TaskPaneUrl" DefaultValue="https://YOUR_HOST/web/taskpane.html"/> <!--Replace -->
+      <bt:Url id="TaskPaneUrl" DefaultValue="https://red-wave-057987a0f.2.azurestaticapps.net/taskpane.html"/> <!--Replace -->
     </bt:Urls>
     <bt:ShortStrings>
       <bt:String id="groupLabel" DefaultValue="Case Filer"/>
