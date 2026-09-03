@@ -19,6 +19,23 @@
       <button id="track-case" type="button">
         Create routing and move message
       </button>
+
+      <section id="confirmation" aria-label="Confirm mailbox changes" hidden>
+        <p id="confirmation-message"></p>
+        <p>
+          OLHelper will create or reuse a case folder, create an Inbox rule,
+          and move the selected message.
+        </p>
+        <div class="button-row">
+          <button id="confirm-track-case" type="button">
+            Confirm and create
+          </button>
+          <button id="cancel-track-case" class="secondary" type="button">
+            Cancel
+          </button>
+        </div>
+      </section>
+
       <div id="status" role="status" aria-live="polite"></div>
     </main>
   </body>

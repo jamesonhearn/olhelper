@@ -49,6 +49,28 @@ button:disabled {
   cursor: default;
 }
 
+#confirmation {
+  padding: 12px;
+  border: 1px solid #d1d1d1;
+  border-radius: 4px;
+}
+
+#confirmation p:first-child {
+  margin-top: 0;
+  font-weight: 600;
+}
+
+.button-row {
+  display: flex;
+  gap: 8px;
+}
+
+button.secondary {
+  border: 1px solid #8a8886;
+  background: #fff;
+  color: #242424;
+}
+
 #status {
   margin-top: 16px;
 }

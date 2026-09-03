@@ -22,25 +22,48 @@ Office.onReady(() => {
   const button = document.getElementById(
     "track-case",
   ) as HTMLButtonElement;
+  const confirmation = document.getElementById(
+    "confirmation",
+  ) as HTMLElement;
+  const confirmationMessage = document.getElementById(
+    "confirmation-message",
+  ) as HTMLElement;
+  const confirmButton = document.getElementById(
+    "confirm-track-case",
+  ) as HTMLButtonElement;
+  const cancelButton = document.getElementById(
+    "cancel-track-case",
+  ) as HTMLButtonElement;
 
   button.disabled = !trackingId;
 
-  button.addEventListener("click", async () => {
+  if (!trackingId) {
+    return;
+  }
+
+  button.addEventListener("click", () => {
     const mailbox =
       Office.context.mailbox.userProfile.emailAddress ||
       "the signed-in mailbox";
-    const confirmed = window.confirm(
-      `Track ${trackingId} in ${mailbox}?\n\n` +
-        "OLHelper will create or reuse a case folder, create an Inbox rule, " +
-        "and move the selected message.",
-    );
 
-    if (!confirmed) {
-      setStatus("No mailbox changes were made.");
-      return;
-    }
+    confirmationMessage.textContent =
+      `Track ${trackingId} in ${mailbox}?`;
+    confirmation.hidden = false;
+    button.hidden = true;
+    confirmButton.focus();
+    setStatus("Review and confirm the mailbox changes.");
+  });
 
-    button.disabled = true;
+  cancelButton.addEventListener("click", () => {
+    confirmation.hidden = true;
+    button.hidden = false;
+    button.focus();
+    setStatus("No mailbox changes were made.");
+  });
+
+  confirmButton.addEventListener("click", async () => {
+    confirmButton.disabled = true;
+    cancelButton.disabled = true;
     setStatus("Creating case routing...");
 
     try {
@@ -52,7 +75,8 @@ Office.onReady(() => {
       const message =
         error instanceof Error ? error.message : "Unexpected error";
       setStatus(`Unable to track case: ${message}`);
-      button.disabled = false;
+      confirmButton.disabled = false;
+      cancelButton.disabled = false;
     }
   });
 });
