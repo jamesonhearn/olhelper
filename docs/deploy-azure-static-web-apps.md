@@ -150,6 +150,39 @@ Download the `olhelper-pilot-manifest` artifact and use
 `manifest.pilot.xml` for sideloading. Do not sideload the checked-in
 `manifest.xml`; it intentionally points to localhost.
 
+The deployment artifact includes a minimal `index.html` because Azure Static
+Web Apps requires a default document at the artifact root. Outlook does not use
+that page for the add-in; the manifest opens `taskpane.html` and
+`commands.html`.
+
+## How Outlook authenticates to the sandbox registration
+
+The XML manifest identifies the hosted task-pane URL, not the Entra
+registration. Webpack embeds the public sandbox application client ID and
+tenant ID into the hosted JavaScript at build time from the protected GitHub
+environment variables.
+
+Authentication begins only when a mailbox operation requests a Graph token:
+
+1. `auth.ts` initializes MSAL with the embedded client ID and the sandbox
+   tenant-specific authority.
+2. `createNestablePublicClientApplication` asks the Office host to broker the
+   currently signed-in Office identity.
+3. Entra validates that the hosted origin matches the registration's SPA
+   redirect `brk-multihub://<host>`.
+4. Entra evaluates the sandbox user's assignment, delegated permissions,
+   consent, Conditional Access, and sign-in requirements.
+5. If consent and a valid session already exist, token acquisition can be
+   silent. Otherwise, Outlook displays Microsoft's sign-in/consent experience
+   showing the app registration display name and requested permissions.
+6. MSAL returns a short-lived delegated token to the task pane, and OLHelper
+   sends it directly to Microsoft Graph for `/me` operations.
+
+The Azure Static Web Apps subscription does not authenticate the Outlook user
+and does not receive the Graph token. Its only role is serving the static
+files. Do not configure Static Web Apps built-in authentication for this
+pilot; it is separate from Office NAA and is not needed.
+
 ## 5. Validate the deployed boundary
 
 Confirm availability and response headers:

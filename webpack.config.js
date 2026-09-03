@@ -79,6 +79,7 @@ module.exports = async (_env, argv) => {
       new CopyWebpackPlugin({
         patterns: [
           { from: "assets", to: "assets" },
+          { from: "src/index.html", to: "index.html" },
           { from: "src/404.html", to: "404.html" },
           { from: "staticwebapp.config.json", to: "staticwebapp.config.json" },
         ],
