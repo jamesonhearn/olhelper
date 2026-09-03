@@ -1,0 +1,63 @@
+name: Deploy OLHelper pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      host_origin:
+        description: Azure Static Web Apps HTTPS origin
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: pilot
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate
+        env:
+          OLHELPER_CLIENT_ID: ${{ vars.OLHELPER_CLIENT_ID }}
+          OLHELPER_TENANT_ID: ${{ vars.OLHELPER_TENANT_ID }}
+        run: |
+          npm run typecheck
+          npm test
+          npm run security:audit
+          npm run build
+
+      - name: Generate hosted manifest
+        env:
+          HOST_ORIGIN: ${{ inputs.host_origin }}
+        run: npm run manifest:hosted -- "$HOST_ORIGIN"
+
+      - name: Validate hosted manifest
+        run: npx office-addin-manifest validate dist/manifest.pilot.xml
+
+      - name: Deploy static content
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          action: upload
+          app_location: dist
+          skip_app_build: true
+
+      - name: Publish hosted manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: olhelper-pilot-manifest
+          path: dist/manifest.pilot.xml
+          if-no-files-found: error

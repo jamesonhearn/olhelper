@@ -1,0 +1,54 @@
+:root {
+  color: #242424;
+  font-family: "Segoe UI", sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+main {
+  padding: 20px;
+}
+
+h1 {
+  margin: 0;
+  color: #0f6cbd;
+  font-size: 24px;
+}
+
+.subtitle {
+  margin: 4px 0 20px;
+  color: #616161;
+}
+
+#message-summary {
+  margin-bottom: 16px;
+  padding: 12px;
+  border: 1px solid #d1d1d1;
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+}
+
+#subject {
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+button {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 2px;
+  background: #0f6cbd;
+  color: #fff;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: #b3b3b3;
+  cursor: default;
+}
+
+#status {
+  margin-top: 16px;
+}

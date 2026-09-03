@@ -1,0 +1,30 @@
+{
+  "globalHeaders": {
+    "Content-Security-Policy": "default-src 'self'; base-uri 'none'; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.login.microsoftonline.com; font-src 'self'; form-action 'none'; frame-src https://login.microsoftonline.com https://*.login.microsoftonline.com; frame-ancestors https://outlook.office.com https://outlook.office365.com https://*.office.com https://*.office365.com; img-src 'self' data:; object-src 'none'; script-src 'self' https://appsforoffice.microsoft.com; style-src 'self'; worker-src 'self' blob:",
+    "Permissions-Policy": "camera=(), geolocation=(), microphone=(), payment=(), usb=()",
+    "Referrer-Policy": "no-referrer",
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains",
+    "X-Content-Type-Options": "nosniff"
+  },
+  "routes": [
+    {
+      "route": "/*.html",
+      "headers": {
+        "Cache-Control": "no-store"
+      }
+    },
+    {
+      "route": "/manifest*.xml",
+      "headers": {
+        "Cache-Control": "no-store",
+        "Content-Type": "application/xml"
+      }
+    }
+  ],
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/404.html",
+      "statusCode": 404
+    }
+  }
+}
