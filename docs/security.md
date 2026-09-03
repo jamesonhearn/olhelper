@@ -43,6 +43,7 @@ metadata, and user-agent information. They must not contain mailbox data.
 | A user triggers unexpected mailbox changes | Explicit confirmation identifies the mailbox and describes all mutations before token acquisition |
 | A token remains available after the task pane closes | MSAL cache uses `sessionStorage`; tokens are never copied to application storage or telemetry |
 | A registration or manifest redirects authentication elsewhere | Single-tenant authority, exact NAA broker origin, controlled manifest, and restricted registration ownership |
+| An unapproved site embeds the task pane | CSP `frame-ancestors` permits only the supported Outlook and Office host origins, including `outlook.cloud.microsoft` for new Outlook |
 | A vulnerable dependency changes the delivered JavaScript | Lockfile installation, production dependency audit, Dependabot, dependency review, and CodeQL |
 | Support data leaks through monitoring | No application telemetry in the pilot and a prohibition on mailbox identifiers or content in diagnostics |
 
