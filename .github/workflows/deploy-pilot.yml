@@ -12,7 +12,18 @@ permissions:
   contents: read
 
 jobs:
+  require-main:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Reject non-main deployment
+        run: |
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "Pilot deployments must run from main."
+            exit 1
+          fi
+
   deploy:
+    needs: require-main
     runs-on: ubuntu-latest
     environment: pilot
 

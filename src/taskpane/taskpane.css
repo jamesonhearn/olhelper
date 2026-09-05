@@ -35,6 +35,15 @@ h1 {
   font-weight: 600;
 }
 
+#tracking-id {
+  margin-bottom: 6px;
+}
+
+#case-state {
+  color: #616161;
+  font-size: 13px;
+}
+
 button {
   padding: 8px 16px;
   border: 0;
@@ -49,10 +58,21 @@ button:disabled {
   cursor: default;
 }
 
+#case-actions {
+  display: grid;
+  gap: 8px;
+}
+
+button.warning {
+  background: #a4262c;
+}
+
 #confirmation {
+  margin-top: 12px;
   padding: 12px;
   border: 1px solid #d1d1d1;
   border-radius: 4px;
+  background: #fafafa;
 }
 
 #confirmation p:first-child {
@@ -73,4 +93,6 @@ button.secondary {
 
 #status {
   margin-top: 16px;
+  min-height: 20px;
+  overflow-wrap: anywhere;
 }

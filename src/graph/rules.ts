@@ -1,6 +1,6 @@
 import { graphRequest } from "./client";
 
-interface MessageRule {
+export interface MessageRule {
   id: string;
   displayName: string;
   sequence: number;
@@ -15,8 +15,21 @@ interface RuleCollection {
   "@odata.nextLink"?: string;
 }
 
-function managedRuleName(trackingId: string): string {
+export function managedRuleName(trackingId: string): string {
   return `OLHelper | TrackingID#${trackingId}`;
+}
+
+export function isManagedRuleForTrackingId(
+  displayName: string,
+  trackingId: string,
+): boolean {
+  return (
+    displayName.localeCompare(
+      managedRuleName(trackingId),
+      undefined,
+      { sensitivity: "accent" },
+    ) === 0
+  );
 }
 
 async function listAllRules(): Promise<MessageRule[]> {
@@ -33,6 +46,22 @@ async function listAllRules(): Promise<MessageRule[]> {
   return rules;
 }
 
+export async function findCaseRule(
+  trackingId: string,
+): Promise<MessageRule | null> {
+  const displayName = managedRuleName(trackingId);
+  const existing = (await listAllRules()).filter(
+    (rule) =>
+      isManagedRuleForTrackingId(rule.displayName, trackingId),
+  );
+
+  if (existing.length > 1) {
+    throw new Error(`Multiple OLHelper rules exist for ${trackingId}.`);
+  }
+
+  return existing[0] ?? null;
+}
+
 export async function ensureCaseRule(
   trackingId: string,
   folderId: string,
@@ -40,7 +69,8 @@ export async function ensureCaseRule(
   const rules = await listAllRules();
   const displayName = managedRuleName(trackingId);
   const existing = rules.filter(
-    (rule) => rule.displayName === displayName,
+    (rule) =>
+      isManagedRuleForTrackingId(rule.displayName, trackingId),
   );
 
   if (existing.length > 1) {
@@ -69,7 +99,7 @@ export async function ensureCaseRule(
       body: JSON.stringify({
         displayName,
         sequence,
-        isEnabled: true,
+        isEnabled: false,
         conditions: {
           subjectContains: [`TrackingID#${trackingId}`],
         },
@@ -79,5 +109,48 @@ export async function ensureCaseRule(
         },
       }),
     },
+  );
+}
+
+export async function setCaseRuleEnabled(
+  ruleId: string,
+  isEnabled: boolean,
+): Promise<MessageRule> {
+  return graphRequest<MessageRule>(
+    `/me/mailFolders/inbox/messageRules/${encodeURIComponent(ruleId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ isEnabled }),
+    },
+  );
+}
+
+export async function updateCaseRuleTarget(
+  ruleId: string,
+  trackingId: string,
+  folderId: string,
+): Promise<MessageRule> {
+  return graphRequest<MessageRule>(
+    `/me/mailFolders/inbox/messageRules/${encodeURIComponent(ruleId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({
+        isEnabled: false,
+        conditions: {
+          subjectContains: [`TrackingID#${trackingId}`],
+        },
+        actions: {
+          moveToFolder: folderId,
+          stopProcessingRules: false,
+        },
+      }),
+    },
+  );
+}
+
+export async function deleteCaseRule(ruleId: string): Promise<void> {
+  await graphRequest<void>(
+    `/me/mailFolders/inbox/messageRules/${encodeURIComponent(ruleId)}`,
+    { method: "DELETE" },
   );
 }

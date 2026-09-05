@@ -203,14 +203,23 @@ Perform the pilot with two sandbox users:
 3. Open OLHelper and verify the confirmation names the expected mailbox and
    operations.
 4. Cancel once and confirm that no folder, rule, or move occurs.
-5. Confirm and verify `Support Cases\Active\OLH-1001`, the managed Inbox rule,
-   and movement of the selected message.
-6. Close Outlook and send another matching message from the second sandbox
+5. Confirm Track and verify `Support Cases\Active\OLH-1001`, the enabled
+   managed Inbox rule, and movement of the selected message.
+6. Select **Check case status** and verify the case reports Active with routing
+   enabled.
+7. Close Outlook and send another matching message from the second sandbox
    user.
-7. Verify Exchange routes it while OLHelper is not running.
-8. Attempt sign-in with an unassigned sandbox user and confirm access is
+8. Verify Exchange routes it while OLHelper is not running.
+9. Open a case message, select **Archive case**, and verify the folder moves to
+   `Support Cases\Archived\OLH-1001` and the managed rule is removed.
+10. Send another matching message and verify it remains in the Inbox.
+11. Open the archived message, select **Reopen case**, and verify the folder
+    returns to `Active` and routing is restored.
+12. Disable the managed rule in Outlook, use **Check case status**, then select
+    **Repair routing** and verify the rule is enabled.
+13. Attempt sign-in with an unassigned sandbox user and confirm access is
    blocked.
-9. Inspect browser network activity and confirm Graph calls go only to
+14. Inspect browser network activity and confirm Graph calls go only to
    `graph.microsoft.com`.
 
 ## 6. Roll back or remove the pilot

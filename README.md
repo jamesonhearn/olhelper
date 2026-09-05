@@ -1,9 +1,20 @@
 # OLHelper
 
 OLHelper is an Outlook task-pane add-in that uses delegated Microsoft Graph
-permissions to create support-case folders, install native Inbox rules, and move
-selected messages. The prototype has no backend service, client secret, or
-application-level mailbox access.
+permissions to manage support-case folders, native Inbox rules, and selected
+messages. The pilot supports a complete case lifecycle:
+
+- **Track** creates or reuses an active case folder, moves the selected message,
+  and enables persistent routing.
+- **Check status** reports whether the case is active, archived, untracked, or
+  requires routing repair.
+- **Archive** disables routing, moves the case folder to `Archived`, and removes
+  the OLHelper-managed rule.
+- **Reopen** moves an archived case back to `Active` and restores routing.
+- **Repair routing** recreates or enables the managed rule for an active case.
+
+The pilot has no backend service, client secret, application-level mailbox
+access, or centralized storage of mailbox content.
 
 ## Configuration responsibilities
 

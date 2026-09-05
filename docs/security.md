@@ -40,7 +40,7 @@ metadata, and user-agent information. They must not contain mailbox data.
 | A compromised deployment serves mailbox-reading JavaScript | Protected pilot environment, reviewed changes, CodeQL, dependency review, CSP, immutable build output, and rapid deployment-token rotation |
 | A malicious pagination URL receives an access token | Graph client permits only relative Graph paths and absolute `https://graph.microsoft.com/v1.0/` URLs |
 | A malformed Tracking ID creates unsafe folders or rules | Allow-listed characters, 64-character limit, URL encoding, and negative tests |
-| A user triggers unexpected mailbox changes | Explicit confirmation identifies the mailbox and describes all mutations before token acquisition |
+| A user triggers unexpected mailbox changes | Every Track, Archive, Reopen, and Repair action requires an in-pane confirmation that identifies the mailbox and describes the mutations |
 | A token remains available after the task pane closes | MSAL cache uses `sessionStorage`; tokens are never copied to application storage or telemetry |
 | A registration or manifest redirects authentication elsewhere | Single-tenant authority, exact NAA broker origin, controlled manifest, and restricted registration ownership |
 | An unapproved site embeds the task pane | CSP `frame-ancestors` permits only the supported Outlook and Office host origins, including `outlook.cloud.microsoft` for new Outlook |
@@ -71,11 +71,17 @@ Before using OLHelper with anything other than synthetic sandbox mail:
   vulnerabilities. They are excluded from the runtime bundle, and the CI
   security gate separately verifies production dependencies. They must still
   be tracked and remediated or formally dispositioned before production.
-- Graph does not provide transactional creation of the folder, rule, and
-  message move. A failure can leave a folder or rule that a retry must reuse.
-- The current workflow covers Track Case only. Close, reopen, repair, archival,
-  quota handling, and rule-conflict user experiences require separate design
-  and testing.
+- Graph does not provide transactions across folder, rule, and message
+  operations. OLHelper orders operations to keep routing disabled until the
+  selected message is moved, reports exact partial-success states, and provides
+  Repair routing. A failed operation can still leave a reusable folder or a
+  disabled rule.
+- The pilot now covers Track, status, Archive, Reopen, and Repair routing.
+  Automated quota handling and duplicate/conflicting-folder remediation remain
+  outside the pilot.
+- Exchange `subjectContains` matching is not boundary-aware. Tracking IDs with
+  shared prefixes can overlap (for example, `ABC` and `ABC-2`). Production use
+  requires a canonical delimiter or fixed-length identifier format.
 - Browser CSP is an additional control, not a substitute for review of every
   JavaScript change delivered from the static origin.
 

@@ -20,6 +20,17 @@ let msal: IPublicClientApplication | undefined;
 
 async function getMsal(): Promise<IPublicClientApplication> {
   if (!msal) {
+    if (
+      !Office.context.requirements.isSetSupported(
+        "NestedAppAuth",
+        "1.1",
+      )
+    ) {
+      throw new Error(
+        "This Outlook client does not support Nested App Authentication 1.1.",
+      );
+    }
+
     const clientId = process.env.OLHELPER_CLIENT_ID;
     const tenantId = process.env.OLHELPER_TENANT_ID;
 
