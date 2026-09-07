@@ -14,13 +14,13 @@ The pilot uses these delegated permissions:
 
 These permissions are broader than a single case folder. Microsoft Graph does
 not provide a permission that limits delegated access to one Tracking ID or
-mail folder. Approval of this residual scope is a release gate.
+mail folder.
 
 ## Data handling
 
 OLHelper reads the selected message subject and Office item ID. It sends the
 item ID, generated folder names, and generated rule configuration directly to
-Microsoft Graph. The static host does not receive these values.
+Microsoft Graph. The static host does not receive or handle any user-related data.
 
 Do not add any of the following to logs, telemetry, URLs, or crash reports:
 
@@ -47,7 +47,7 @@ metadata, and user-agent information. They must not contain mailbox data.
 | A vulnerable dependency changes the delivered JavaScript | Lockfile installation, production dependency audit, Dependabot, dependency review, and CodeQL |
 | Support data leaks through monitoring | No application telemetry in the pilot and a prohibition on mailbox identifiers or content in diagnostics |
 
-## Pilot release gates
+## Local Testing and Development Guidance
 
 Before using OLHelper with anything other than synthetic sandbox mail:
 
