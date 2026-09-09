@@ -67,7 +67,7 @@ jobs:
           skip_app_build: true
 
       - name: Publish hosted manifest
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: olhelper-pilot-manifest
           path: dist/manifest.pilot.xml
