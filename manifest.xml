@@ -97,12 +97,12 @@
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="Group.Label" DefaultValue="OLHelper"/>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="Track support case"/>
+        <bt:String id="TaskpaneButton.Label" DefaultValue="Manage support case"/>
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String
           id="TaskpaneButton.Tooltip"
-          DefaultValue="Create persistent routing for the selected support-case message."/>
+          DefaultValue="Track, archive, reopen, and repair routing for a support case."/>
       </bt:LongStrings>
     </Resources>
   </VersionOverrides>
