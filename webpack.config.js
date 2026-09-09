@@ -46,7 +46,13 @@ module.exports = async (_env, argv) => {
         {
           test: /\.ts$/,
           exclude: /node_modules/,
-          use: "ts-loader",
+          use: {
+            loader: "esbuild-loader",
+            options: {
+              loader: "ts",
+              target: "es2022",
+            },
+          },
         },
         {
           test: /\.css$/,
