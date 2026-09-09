@@ -2,12 +2,12 @@ import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-const [, , originArgument, outputArgument = "dist/manifest.pilot.xml"] =
-  process.argv;
+const [, , outputArgument = "dist/manifest.pilot.xml"] = process.argv;
+const originArgument = process.env.OLHELPER_HOST_ORIGIN;
 
 if (!originArgument) {
   throw new Error(
-    "Usage: npm run manifest:hosted -- https://<host> [output-file]",
+    "OLHELPER_HOST_ORIGIN must be set to the approved HTTPS deployment origin.",
   );
 }
 

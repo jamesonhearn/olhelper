@@ -37,14 +37,14 @@ metadata, and user-agent information. They must not contain mailbox data.
 
 | Threat | Primary mitigation |
 | --- | --- |
-| A compromised deployment serves mailbox-reading JavaScript | Protected pilot environment, reviewed changes, CodeQL, dependency review, CSP, immutable build output, and rapid deployment-token rotation |
+| A compromised deployment serves mailbox-reading JavaScript | Protected pilot environment, reviewed changes, CodeQL, dependency review, CSP, immutable build output, an environment-controlled exact host origin, and rapid deployment-token rotation |
 | A malicious pagination URL receives an access token | Graph client permits only relative Graph paths and absolute `https://graph.microsoft.com/v1.0/` URLs |
 | A malformed Tracking ID creates unsafe folders or rules | Allow-listed characters, 64-character limit, URL encoding, and negative tests |
 | A user triggers unexpected mailbox changes | Every Track, Archive, Reopen, and Repair action requires an in-pane confirmation that identifies the mailbox and describes the mutations |
 | A token remains available after the task pane closes | MSAL cache uses `sessionStorage`; tokens are never copied to application storage or telemetry |
 | A registration or manifest redirects authentication elsewhere | Single-tenant authority, exact NAA broker origin, controlled manifest, and restricted registration ownership |
 | An unapproved site embeds the task pane | CSP `frame-ancestors` permits only the supported Outlook and Office host origins, including `outlook.cloud.microsoft` for new Outlook |
-| A vulnerable dependency changes the delivered JavaScript | Lockfile installation, production dependency audit, Dependabot, dependency review, and CodeQL |
+| A vulnerable dependency changes the delivered JavaScript | Lockfile installation, production and full dependency audit gates, patched transitive overrides, Dependabot, dependency review, and CodeQL |
 | Support data leaks through monitoring | No application telemetry in the pilot and a prohibition on mailbox identifiers or content in diagnostics |
 
 ## Local Testing and Development Guidance
@@ -58,19 +58,24 @@ Before using OLHelper with anything other than synthetic sandbox mail:
    pilot user.
 4. Enable branch protection, required CI checks, secret scanning, and the
    protected `pilot` GitHub environment.
-5. Confirm the deployed CSP and security headers using browser developer tools
+5. Set the protected `pilot` environment variable `OLHELPER_HOST_ORIGIN` to the
+   exact Azure Static Web Apps HTTPS origin. Do not expose it as a workflow
+   dispatch input.
+6. Confirm the deployed CSP and security headers using browser developer tools
    or `curl.exe -I`.
-6. Complete keyboard, screen-reader, high-contrast, and 200% zoom checks.
-7. Run the end-to-end acceptance tests in the deployment guide.
-8. Record the app owner, backup owner, deployment-token rotation procedure,
+7. Complete keyboard, screen-reader, high-contrast, and 200% zoom checks.
+8. Run the end-to-end acceptance tests in the deployment guide.
+9. Record the app owner, backup owner, deployment-token rotation procedure,
    rollback artifact, and enterprise-application disable procedure.
 
 ## Known prototype limitations
 
-- The Office add-in development toolchain currently reports transitive
-  vulnerabilities. They are excluded from the runtime bundle, and the CI
-  security gate separately verifies production dependencies. They must still
-  be tracked and remediated or formally dispositioned before production.
+- The Office add-in development toolchain still includes a moderate-severity
+  `adm-zip` advisory involving extraction through destination symlinks. OLHelper
+  passes repository-controlled XML manifests rather than untrusted ZIP files,
+  the package is excluded from the runtime bundle, and CI rejects high-severity
+  advisories across both production and development dependencies. Continue to
+  track the upstream package until a patched release is available.
 - Graph does not provide transactions across folder, rule, and message
   operations. OLHelper orders operations to keep routing disabled until the
   selected message is moved, reports exact partial-success states, and provides

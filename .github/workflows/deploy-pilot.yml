@@ -2,11 +2,6 @@ name: Deploy OLHelper pilot
 
 on:
   workflow_dispatch:
-    inputs:
-      host_origin:
-        description: Azure Static Web Apps HTTPS origin
-        required: true
-        type: string
 
 permissions:
   contents: read
@@ -52,8 +47,8 @@ jobs:
 
       - name: Generate hosted manifest
         env:
-          HOST_ORIGIN: ${{ inputs.host_origin }}
-        run: npm run manifest:hosted -- "$HOST_ORIGIN"
+          OLHELPER_HOST_ORIGIN: ${{ vars.OLHELPER_HOST_ORIGIN }}
+        run: npm run manifest:hosted
 
       - name: Validate hosted manifest
         run: npx office-addin-manifest validate dist/manifest.pilot.xml

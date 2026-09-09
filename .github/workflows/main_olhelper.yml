@@ -36,6 +36,9 @@ jobs:
       - name: Audit production dependencies
         run: npm run security:audit
 
+      - name: Audit all dependencies
+        run: npm run security:audit:all
+
       - name: Build
         env:
           OLHELPER_CLIENT_ID: 00000000-0000-0000-0000-000000000000
@@ -46,7 +49,9 @@ jobs:
         run: npm run validate
 
       - name: Generate hosted manifest
-        run: npm run manifest:hosted -- https://olhelper-pilot.example.com
+        env:
+          OLHELPER_HOST_ORIGIN: https://olhelper-pilot.example.com
+        run: npm run manifest:hosted
 
       - name: Validate hosted manifest
         run: npx office-addin-manifest validate dist/manifest.pilot.xml
