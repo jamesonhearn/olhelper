@@ -6,7 +6,7 @@ import {
   type CaseLocation,
   type MailFolder,
 } from "../graph/folders";
-import { moveMessage } from "../graph/messages";
+import { moveMessage, findInboxMessagesBySubject } from "../graph/messages";
 import {
   deleteCaseRule,
   ensureCaseRule,
@@ -24,6 +24,7 @@ export interface CaseMailboxOperations {
     destination: Exclude<CaseLocation, "untracked">,
   ): Promise<MailFolder>;
   moveMessage(messageId: string, folderId: string): Promise<{ id: string }>;
+  findInboxMessages(trackingId: string, excludeId: string): Promise<string[]>;
   ensureRule(trackingId: string, folderId: string): Promise<MessageRule>;
   findRule(trackingId: string): Promise<MessageRule | null>;
   setRuleEnabled(ruleId: string, enabled: boolean): Promise<MessageRule>;
@@ -40,6 +41,7 @@ export interface TrackCaseResult {
   folderId: string;
   ruleId: string;
   movedMessageId: string;
+  sweptMessageCount: number;
 }
 
 export interface CaseActionResult {
@@ -68,6 +70,8 @@ export const graphCaseMailboxOperations: CaseMailboxOperations = {
   setRuleEnabled: setCaseRuleEnabled,
   updateRuleTarget: updateCaseRuleTarget,
   deleteRule: deleteCaseRule,
+  findInboxMessages: (trackingId, excludeId) =>
+    findInboxMessagesBySubject(trackingId, excludeId),
 };
 
 export async function trackCase(
@@ -97,11 +101,35 @@ export async function trackCase(
     );
   }
 
+  // Sweep any case email already sitting in the Inbox into the case folder. The
+  // Exchange rule only routes future arrivals, so without this, messages that
+  // arrived before Track would be left behind. Best effort: a sweep failure must
+  // not fail the Track itself, since the folder, move, and rule already succeeded.
+  let sweptMessageCount = 0;
+  try {
+    const pendingIds = await operations.findInboxMessages(
+      trackingId,
+      movedMessage.id,
+    );
+
+    for (const pendingId of pendingIds) {
+      try {
+        await operations.moveMessage(pendingId, folder.id);
+        sweptMessageCount += 1;
+      } catch {
+        // Skip an individual message that cannot be moved.
+      }
+    }
+  } catch {
+    // Inbox sweep is best effort; ignore discovery failures.
+  }
+
   return {
     trackingId,
     folderId: folder.id,
     ruleId: rule.id,
     movedMessageId: movedMessage.id,
+    sweptMessageCount,
   };
 }
 
