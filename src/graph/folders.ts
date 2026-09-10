@@ -67,6 +67,53 @@ async function ensureFolder(
   );
 }
 
+// Case folders may be renamed by the user to append a customer name or topic after
+// the tracking ID (for example "1234567890123456 Tim - VM resize"). Match the
+// tracking ID as a prefix so those renames do not break tracking. An exact match is
+// preferred; otherwise the tracking ID must be followed by a space so a longer
+// numeric ID is never matched by mistake.
+async function findCaseFolder(
+  collectionPath: string,
+  trackingId: string,
+): Promise<MailFolder | null> {
+  const filter = encodeURIComponent(
+    `startswith(displayName, '${escapeODataString(trackingId)}')`,
+  );
+
+  const result = await graphRequest<FolderCollection>(
+    `${collectionPath}?$select=id,displayName&$filter=${filter}`,
+  );
+
+  const matches = result.value.filter(
+    (f) =>
+      f.displayName === trackingId ||
+      f.displayName.startsWith(`${trackingId} `),
+  );
+
+  const exact = matches.find((f) => f.displayName === trackingId);
+  if (exact) {
+    return exact;
+  }
+
+  if (matches.length > 1) {
+    throw new Error(
+      `Multiple case folders start with "${trackingId}". Keep only one.`,
+    );
+  }
+
+  return matches[0] ?? null;
+}
+
+async function ensureCaseFolder(
+  collectionPath: string,
+  trackingId: string,
+): Promise<MailFolder> {
+  return (
+    (await findCaseFolder(collectionPath, trackingId)) ??
+    (await createFolder(collectionPath, trackingId))
+  );
+}
+
 async function findCaseContainer(
   displayName: string,
 ): Promise<MailFolder | null> {
@@ -98,7 +145,7 @@ export async function ensureActiveCaseFolder(
 ): Promise<MailFolder> {
   const active = await ensureCaseContainer(activeFolderName);
 
-  return ensureFolder(
+  return ensureCaseFolder(
     `/me/mailFolders/${encodeURIComponent(active.id)}/childFolders`,
     trackingId,
   );
@@ -113,13 +160,13 @@ export async function getCaseFolderState(
   ]);
   const [activeCase, archivedCase] = await Promise.all([
     active
-      ? findFolder(
+      ? findCaseFolder(
           `/me/mailFolders/${encodeURIComponent(active.id)}/childFolders`,
           trackingId,
         )
       : Promise.resolve(null),
     archived
-      ? findFolder(
+      ? findCaseFolder(
           `/me/mailFolders/${encodeURIComponent(archived.id)}/childFolders`,
           trackingId,
         )
