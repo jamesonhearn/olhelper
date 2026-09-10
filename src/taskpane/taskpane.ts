@@ -78,12 +78,16 @@ Office.onReady(() => {
     track: {
       confirmation: `Track ${trackingId} in ${mailbox}?`,
       details:
-        "OLHelper will create or reuse the active case folder, move the selected message, and enable persistent Inbox routing.",
+        "OLHelper will create or reuse the active case folder, move the selected message, sweep any other Inbox email for this case into the folder, and enable persistent Inbox routing.",
       progress: "Creating case routing and moving the message...",
       run: async () => {
         const result = await trackSelectedCase();
+        const sweptNote =
+          result.sweptMessageCount > 0
+            ? ` Also moved ${result.sweptMessageCount} other Inbox message(s) for this case.`
+            : "";
         setStatus(
-          `Case ${result.trackingId} is active and the selected message was moved.`,
+          `Case ${result.trackingId} is active and the selected message was moved.${sweptNote}`,
         );
         showActionsForState("active", "enabled");
       },
