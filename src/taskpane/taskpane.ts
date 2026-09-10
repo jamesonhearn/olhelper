@@ -78,12 +78,38 @@ Office.onReady(() => {
     track: {
       confirmation: `Track ${trackingId} in ${mailbox}?`,
       details:
-        "OLHelper will create or reuse the active case folder, move the selected message, and enable persistent Inbox routing.",
+        "OLHelper will create or reuse the active case folder, move the selected message, sweep any other Inbox email for this case into the folder, and enable persistent Inbox routing.",
       progress: "Creating case routing and moving the message...",
       run: async () => {
         const result = await trackSelectedCase();
+        const notes: string[] = [];
+
+        if (result.sweptMessageCount > 0) {
+          notes.push(
+            `Also moved ${result.sweptMessageCount} other Inbox message(s) for this case.`,
+          );
+        }
+
+        if (result.unsweptMessageCount > 0) {
+          notes.push(
+            `${result.unsweptMessageCount} matching Inbox message(s) could not be moved.`,
+          );
+        }
+
+        if (result.sweepStatus === "failed") {
+          notes.push(
+            "The Inbox sweep hit an error, so earlier mail for this case may still be in the Inbox. Run Track again to retry.",
+          );
+        } else if (result.sweepStatus === "truncated") {
+          notes.push(
+            `Only the ${result.sweepScannedCount} most recent Inbox messages were searched, so older mail for this case may still be in the Inbox.`,
+          );
+        }
+
         setStatus(
-          `Case ${result.trackingId} is active and the selected message was moved.`,
+          `Case ${result.trackingId} is active and the selected message was moved.${
+            notes.length > 0 ? ` ${notes.join(" ")}` : ""
+          }`,
         );
         showActionsForState("active", "enabled");
       },

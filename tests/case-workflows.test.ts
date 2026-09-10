@@ -13,11 +13,18 @@ import type {
   CaseLocation,
   MailFolder,
 } from "../src/graph/folders";
+import type { InboxScanResult } from "../src/graph/messages";
 import type { MessageRule } from "../src/graph/rules";
 
 function createOperations(
   state: CaseFolderState,
   existingRule: MessageRule | null = null,
+  inboxScan: InboxScanResult | Error = {
+    messageIds: [],
+    status: "complete",
+    scannedCount: 250,
+  },
+  unmovableMessageIds: string[] = [],
 ): CaseMailboxOperations & { calls: string[] } {
   const calls: string[] = [];
   const folder = state.folder ?? {
@@ -49,9 +56,23 @@ function createOperations(
       calls.push(`move-folder:${destination}`);
       return { ...folder, id: `${destination}-folder` };
     },
-    async moveMessage() {
-      calls.push("move-message");
+    async moveMessage(messageId: string) {
+      calls.push(`move-message:${messageId}`);
+
+      if (unmovableMessageIds.includes(messageId)) {
+        throw new Error("Message could not be moved.");
+      }
+
       return { id: "moved-message" };
+    },
+    async findInboxMessages() {
+      calls.push("find-inbox-messages");
+
+      if (inboxScan instanceof Error) {
+        throw inboxScan;
+      }
+
+      return inboxScan;
     },
     async ensureRule() {
       calls.push("ensure-rule");
@@ -88,13 +109,94 @@ test("tracks a case by moving the message before enabling routing", async () => 
   const result = await trackCase("CASE-1", "message-1", operations);
 
   assert.equal(result.movedMessageId, "moved-message");
+  assert.equal(result.sweptMessageCount, 0);
+  assert.equal(result.unsweptMessageCount, 0);
+  assert.equal(result.sweepStatus, "complete");
   assert.deepEqual(operations.calls, [
     "get-state",
     "ensure-folder",
     "ensure-rule",
-    "move-message",
+    "move-message:message-1",
     "set-rule:true",
+    "find-inbox-messages",
   ]);
+});
+
+test("sweeps pre-existing Inbox mail for the case into the case folder", async () => {
+  const operations = createOperations(
+    { location: "untracked", folder: null },
+    null,
+    {
+      messageIds: ["assignment-1", "assignment-2"],
+      status: "complete",
+      scannedCount: 250,
+    },
+  );
+
+  const result = await trackCase("CASE-1", "message-1", operations);
+
+  assert.equal(result.sweptMessageCount, 2);
+  assert.equal(result.unsweptMessageCount, 0);
+  assert.equal(result.sweepStatus, "complete");
+  assert.deepEqual(operations.calls, [
+    "get-state",
+    "ensure-folder",
+    "ensure-rule",
+    "move-message:message-1",
+    "set-rule:true",
+    "find-inbox-messages",
+    "move-message:assignment-1",
+    "move-message:assignment-2",
+  ]);
+});
+
+test("reports a failed sweep instead of silently reporting nothing", async () => {
+  const operations = createOperations(
+    { location: "untracked", folder: null },
+    null,
+    new Error("Microsoft Graph returned HTTP 429"),
+  );
+
+  const result = await trackCase("CASE-1", "message-1", operations);
+
+  assert.equal(result.sweptMessageCount, 0);
+  assert.equal(
+    result.sweepStatus,
+    "failed",
+    "a failed sweep must be distinguishable from a clean sweep",
+  );
+});
+
+test("keeps matches found before a truncated scan and flags it truncated", async () => {
+  const operations = createOperations(
+    { location: "untracked", folder: null },
+    null,
+    { messageIds: ["assignment-1"], status: "truncated", scannedCount: 250 },
+  );
+
+  const result = await trackCase("CASE-1", "message-1", operations);
+
+  assert.equal(result.sweptMessageCount, 1);
+  assert.equal(result.sweepStatus, "truncated");
+});
+
+test("counts matching messages that could not be moved", async () => {
+  const operations = createOperations(
+    { location: "untracked", folder: null },
+    null,
+    {
+      messageIds: ["assignment-1", "assignment-2"],
+      status: "complete",
+      scannedCount: 250,
+    },
+    ["assignment-2"],
+  );
+
+  const result = await trackCase("CASE-1", "message-1", operations);
+
+  assert.equal(result.sweptMessageCount, 1);
+  assert.equal(result.unsweptMessageCount, 1);
+  assert.equal(result.sweepStatus, "complete");
 });
 
 test("does not track a message into an archived case", async () => {

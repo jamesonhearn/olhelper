@@ -6,7 +6,12 @@ import {
   type CaseLocation,
   type MailFolder,
 } from "../graph/folders";
-import { moveMessage } from "../graph/messages";
+import {
+  moveMessage,
+  findInboxMessagesBySubject,
+  type InboxScanResult,
+  type InboxScanStatus,
+} from "../graph/messages";
 import {
   deleteCaseRule,
   ensureCaseRule,
@@ -24,6 +29,10 @@ export interface CaseMailboxOperations {
     destination: Exclude<CaseLocation, "untracked">,
   ): Promise<MailFolder>;
   moveMessage(messageId: string, folderId: string): Promise<{ id: string }>;
+  findInboxMessages(
+    trackingId: string,
+    excludeId: string,
+  ): Promise<InboxScanResult>;
   ensureRule(trackingId: string, folderId: string): Promise<MessageRule>;
   findRule(trackingId: string): Promise<MessageRule | null>;
   setRuleEnabled(ruleId: string, enabled: boolean): Promise<MessageRule>;
@@ -40,6 +49,13 @@ export interface TrackCaseResult {
   folderId: string;
   ruleId: string;
   movedMessageId: string;
+  sweptMessageCount: number;
+  // Messages that matched the case but could not be moved.
+  unsweptMessageCount: number;
+  sweepStatus: InboxScanStatus;
+  // How many recent messages the direct scan was allowed to walk, so a
+  // "truncated" result can say what was actually covered.
+  sweepScannedCount: number;
 }
 
 export interface CaseActionResult {
@@ -68,6 +84,8 @@ export const graphCaseMailboxOperations: CaseMailboxOperations = {
   setRuleEnabled: setCaseRuleEnabled,
   updateRuleTarget: updateCaseRuleTarget,
   deleteRule: deleteCaseRule,
+  findInboxMessages: (trackingId, excludeId) =>
+    findInboxMessagesBySubject(trackingId, excludeId),
 };
 
 export async function trackCase(
@@ -97,11 +115,47 @@ export async function trackCase(
     );
   }
 
+  // Sweep any case email already sitting in the Inbox into the case folder. The
+  // Exchange rule only routes future arrivals, so without this, messages that
+  // arrived before Track would be left behind. A sweep problem must not fail the
+  // Track itself, since the folder, move, and rule already succeeded - but it
+  // must never be hidden either. Silently reporting zero swept messages is
+  // indistinguishable from a clean sweep, which previously let assignment and
+  // notification mail pile up unrouted in the Inbox without any warning.
+  let sweptMessageCount = 0;
+  let unsweptMessageCount = 0;
+  let sweepStatus: InboxScanStatus = "complete";
+  let sweepScannedCount = 0;
+
+  try {
+    const scan = await operations.findInboxMessages(
+      trackingId,
+      movedMessage.id,
+    );
+    sweepStatus = scan.status;
+    sweepScannedCount = scan.scannedCount;
+
+    for (const pendingId of scan.messageIds) {
+      try {
+        await operations.moveMessage(pendingId, folder.id);
+        sweptMessageCount += 1;
+      } catch {
+        unsweptMessageCount += 1;
+      }
+    }
+  } catch {
+    sweepStatus = "failed";
+  }
+
   return {
     trackingId,
     folderId: folder.id,
     ruleId: rule.id,
     movedMessageId: movedMessage.id,
+    sweptMessageCount,
+    unsweptMessageCount,
+    sweepStatus,
+    sweepScannedCount,
   };
 }
 
