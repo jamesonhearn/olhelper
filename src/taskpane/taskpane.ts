@@ -29,7 +29,11 @@ interface ActionDefinition {
   run: () => Promise<void>;
 }
 
+let confirmationTrigger: HTMLButtonElement | null = null;
+
 Office.onReady(() => {
+  initializeOfficeTheme();
+
   if (
     !Office.context.requirements.isSetSupported(
       "NestedAppAuth",
@@ -148,8 +152,11 @@ Office.onReady(() => {
   };
 
   for (const action of Object.keys(definitions) as CaseAction[]) {
-    getButton(`${action}-case`).addEventListener("click", () => {
+    const actionButton = getButton(`${action}-case`);
+
+    actionButton.addEventListener("click", () => {
       pendingAction = action;
+      confirmationTrigger = actionButton;
       const definition = definitions[action];
 
       document.getElementById("confirmation-message")!.textContent =
@@ -254,6 +261,13 @@ function closeConfirmation(): void {
   setActionButtonsDisabled(false);
   getButton("confirm-action").disabled = false;
   getButton("cancel-action").disabled = false;
+
+  const focusTarget =
+    confirmationTrigger && !confirmationTrigger.hidden
+      ? confirmationTrigger
+      : getButton("check-status");
+  confirmationTrigger = null;
+  focusTarget.focus();
 }
 
 function setActionButtonsDisabled(disabled: boolean): void {
@@ -282,4 +296,59 @@ function getErrorMessage(error: unknown): string {
 
 function setStatus(message: string): void {
   document.getElementById("status")!.textContent = message;
+}
+
+function initializeOfficeTheme(): void {
+  if (
+    !Office.context.requirements.isSetSupported("Mailbox", "1.14")
+  ) {
+    return;
+  }
+
+  applyOfficeTheme(Office.context.officeTheme);
+  Office.context.mailbox.addHandlerAsync(
+    Office.EventType.OfficeThemeChanged,
+    (event: Office.OfficeThemeChangedEventArgs) => {
+      applyOfficeTheme(event.officeTheme);
+    },
+    (result) => {
+      if (result.status === Office.AsyncResultStatus.Failed) {
+        console.warn("OLHelper could not monitor Office theme changes.");
+      }
+    },
+  );
+}
+
+function applyOfficeTheme(theme: Office.OfficeTheme): void {
+  const root = document.documentElement;
+
+  setThemeColor("--body-background", theme.bodyBackgroundColor);
+  setThemeColor("--body-foreground", theme.bodyForegroundColor);
+  setThemeColor("--surface-background", theme.controlBackgroundColor);
+  setThemeColor("--border-color", theme.controlForegroundColor);
+
+  root.dataset.officeTheme = isDarkColor(theme.bodyBackgroundColor)
+    ? "dark"
+    : "light";
+}
+
+function setThemeColor(property: string, value: string): void {
+  if (/^#[0-9a-f]{6}$/i.test(value)) {
+    document.documentElement.style.setProperty(property, value);
+  }
+}
+
+function isDarkColor(value: string): boolean {
+  const match = /^#([0-9a-f]{6})$/i.exec(value);
+
+  if (!match) {
+    return false;
+  }
+
+  const color = Number.parseInt(match[1], 16);
+  const red = (color >> 16) & 0xff;
+  const green = (color >> 8) & 0xff;
+  const blue = color & 0xff;
+
+  return red * 0.299 + green * 0.587 + blue * 0.114 < 128;
 }

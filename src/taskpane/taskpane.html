@@ -11,7 +11,10 @@
       <h1>OLHelper</h1>
       <p class="subtitle">Persistent routing for support-case email</p>
 
-      <section id="message-summary" aria-label="Selected message">
+      <section id="message-summary" aria-labelledby="message-summary-heading">
+        <h2 id="message-summary-heading" class="visually-hidden">
+          Selected message
+        </h2>
         <div id="subject"></div>
         <div id="tracking-id"></div>
         <div id="case-state">Case status has not been checked.</div>
@@ -35,7 +38,14 @@
         </button>
       </section>
 
-      <section id="confirmation" aria-label="Confirm mailbox changes" hidden>
+      <section
+        id="confirmation"
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="confirmation-message"
+        aria-describedby="confirmation-details"
+        hidden
+      >
         <p id="confirmation-message"></p>
         <p id="confirmation-details"></p>
         <div class="button-row">
@@ -48,7 +58,12 @@
         </div>
       </section>
 
-      <div id="status" role="status" aria-live="polite"></div>
+      <div
+        id="status"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      ></div>
     </main>
   </body>
 </html>
