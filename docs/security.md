@@ -18,9 +18,11 @@ mail folder.
 
 ## Data handling
 
-OLHelper reads the selected message subject and Office item ID. It sends the
-item ID, generated folder names, and generated rule configuration directly to
-Microsoft Graph. The static host does not receive or handle any user-related data.
+OLHelper reads the selected message subject and Office item ID. During Track it
+also reads the IDs and subjects of up to the 250 most recent Inbox messages to
+find the complete `TrackingID#<ID>` token. Matching messages are moved directly
+through Microsoft Graph. The add-in does not read message bodies, and the static
+host does not receive or handle mailbox data.
 
 Do not add any of the following to logs, telemetry, URLs, or crash reports:
 
@@ -39,7 +41,9 @@ metadata, and user-agent information. They must not contain mailbox data.
 | --- | --- |
 | A compromised deployment serves mailbox-reading JavaScript | Protected pilot environment, reviewed changes, CodeQL, dependency review, CSP, immutable build output, an environment-controlled exact host origin, and rapid deployment-token rotation |
 | A malicious pagination URL receives an access token | Graph client permits only relative Graph paths and absolute `https://graph.microsoft.com/v1.0/` URLs |
-| A malformed Tracking ID creates unsafe folders or rules | Allow-listed characters, 64-character limit, URL encoding, and negative tests |
+| A malformed Tracking ID creates unsafe folders or rules | Canonical `TrackingID#` prefix, 16–19 digit identifier boundary, URL encoding, and negative tests |
+| A parent case sweep captures collaboration-task messages | Client-side matching requires the complete `TrackingID#<ID>` token with a numeric end boundary |
+| A partial Inbox sweep is mistaken for complete processing | The scan is capped at 250 recent messages and the UI reports discovery failures, move failures, and whether the scan was complete |
 | A user triggers unexpected mailbox changes | Every Track, Archive, Reopen, and Repair action requires an in-pane confirmation that identifies the mailbox and describes the mutations |
 | A token remains available after the task pane closes | MSAL cache uses `sessionStorage`; tokens are never copied to application storage or telemetry |
 | A registration or manifest redirects authentication elsewhere | Single-tenant authority, exact NAA broker origin, controlled manifest, and restricted registration ownership |
@@ -85,8 +89,9 @@ Before using OLHelper with anything other than synthetic sandbox mail:
   Automated quota handling and duplicate/conflicting-folder remediation remain
   outside the pilot.
 - Exchange `subjectContains` matching is not boundary-aware. Tracking IDs with
-  shared prefixes can overlap (for example, `ABC` and `ABC-2`). Production use
-  requires a canonical delimiter or fixed-length identifier format.
+  shared prefixes can overlap (for example, a 16-digit parent case and a
+  19-digit collaboration task). The Inbox sweep prevents this client-side, but
+  native Inbox rules cannot enforce the same numeric end boundary.
 - Browser CSP is an additional control, not a substitute for review of every
   JavaScript change delivered from the static origin.
 

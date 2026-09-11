@@ -78,12 +78,34 @@ Office.onReady(() => {
     track: {
       confirmation: `Track ${trackingId} in ${mailbox}?`,
       details:
-        "OLHelper will create or reuse the active case folder, move the selected message, and enable persistent Inbox routing.",
+        "OLHelper will create or reuse the active case folder, move the selected message, scan up to the 250 most recent Inbox messages for the complete TrackingID token, move matching messages, and enable persistent Inbox routing.",
       progress: "Creating case routing and moving the message...",
       run: async () => {
         const result = await trackSelectedCase();
+        const { sweep } = result;
+        let sweptNote = "";
+
+        if (sweep.discoveryFailed) {
+          sweptNote =
+            " The case is active, but prior Inbox messages could not be checked.";
+        } else {
+          sweptNote =
+            ` Checked ${sweep.scannedMessageCount} Inbox message(s) and moved ` +
+            `${sweep.movedMessageCount} matching message(s).`;
+
+          if (sweep.failedMessageCount > 0) {
+            sweptNote +=
+              ` ${sweep.failedMessageCount} matching message(s) could not be moved.`;
+          }
+
+          if (!sweep.scanComplete) {
+            sweptNote +=
+              " The scan limit was reached, so older Inbox messages were not checked.";
+          }
+        }
+
         setStatus(
-          `Case ${result.trackingId} is active and the selected message was moved.`,
+          `Case ${result.trackingId} is active and the selected message was moved.${sweptNote}`,
         );
         showActionsForState("active", "enabled");
       },

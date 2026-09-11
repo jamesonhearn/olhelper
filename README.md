@@ -5,7 +5,8 @@ permissions to manage support-case folders, native Inbox rules, and selected
 messages. The pilot supports a complete case lifecycle:
 
 - **Track** creates or reuses an active case folder, moves the selected message,
-  and enables persistent routing.
+  enables persistent routing, and sweeps matching messages from the 250 most
+  recent Inbox messages.
 - **Check status** reports whether the case is active, archived, untracked, or
   requires routing repair.
 - **Archive** disables routing, moves the case folder to `Archived`, and removes
@@ -15,6 +16,10 @@ messages. The pilot supports a complete case lifecycle:
 
 The pilot has no backend service, client secret, application-level mailbox
 access, or centralized storage of mailbox content.
+
+Case folders may be renamed with space-delimited context after the Tracking ID,
+for example `1234567890123456 - Contoso`. OLHelper rejects ambiguous matches
+rather than choosing between multiple folders for the same Tracking ID.
 
 ## Configuration responsibilities
 

@@ -67,6 +67,57 @@ async function ensureFolder(
   );
 }
 
+export function isCaseFolderName(
+  displayName: string,
+  trackingId: string,
+): boolean {
+  return (
+    displayName === trackingId ||
+    displayName.startsWith(`${trackingId} `)
+  );
+}
+
+async function findCaseFolder(
+  collectionPath: string,
+  trackingId: string,
+): Promise<MailFolder | null> {
+  const filter = encodeURIComponent(
+    `startswith(displayName, '${escapeODataString(trackingId)}')`,
+  );
+  let url: string | undefined =
+    `${collectionPath}?$select=id,displayName&$filter=${filter}`;
+  const matches: MailFolder[] = [];
+
+  while (url) {
+    const page: FolderCollection =
+      await graphRequest<FolderCollection>(url);
+    matches.push(
+      ...page.value.filter((folder) =>
+        isCaseFolderName(folder.displayName, trackingId),
+      ),
+    );
+    url = page["@odata.nextLink"];
+  }
+
+  if (matches.length > 1) {
+    throw new Error(
+      `Multiple case folders match "${trackingId}". Keep only one before continuing.`,
+    );
+  }
+
+  return matches[0] ?? null;
+}
+
+async function ensureCaseFolder(
+  collectionPath: string,
+  trackingId: string,
+): Promise<MailFolder> {
+  return (
+    (await findCaseFolder(collectionPath, trackingId)) ??
+    (await createFolder(collectionPath, trackingId))
+  );
+}
+
 async function findCaseContainer(
   displayName: string,
 ): Promise<MailFolder | null> {
@@ -98,7 +149,7 @@ export async function ensureActiveCaseFolder(
 ): Promise<MailFolder> {
   const active = await ensureCaseContainer(activeFolderName);
 
-  return ensureFolder(
+  return ensureCaseFolder(
     `/me/mailFolders/${encodeURIComponent(active.id)}/childFolders`,
     trackingId,
   );
@@ -113,13 +164,13 @@ export async function getCaseFolderState(
   ]);
   const [activeCase, archivedCase] = await Promise.all([
     active
-      ? findFolder(
+      ? findCaseFolder(
           `/me/mailFolders/${encodeURIComponent(active.id)}/childFolders`,
           trackingId,
         )
       : Promise.resolve(null),
     archived
-      ? findFolder(
+      ? findCaseFolder(
           `/me/mailFolders/${encodeURIComponent(archived.id)}/childFolders`,
           trackingId,
         )

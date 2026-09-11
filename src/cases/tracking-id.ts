@@ -1,6 +1,4 @@
-const maximumTrackingIdLength = 64;
-const trackingIdPattern =
-  /\bTrackingID#([A-Za-z0-9-]{1,64})(?![A-Za-z0-9-])/i;
+const trackingIdPattern = /\bTrackingID#(\d{16,19})(?!\d)/i;
 
 export function extractTrackingId(subject: string): string | null {
   const match = trackingIdPattern.exec(subject);
@@ -12,11 +10,8 @@ export function trackingToken(trackingId: string): string {
 }
 
 export function caseFolderName(trackingId: string): string {
-  if (
-    trackingId.length > maximumTrackingIdLength ||
-    !/^[A-Za-z0-9-]+$/.test(trackingId)
-  ) {
-    throw new Error("Tracking ID contains unsupported folder characters.");
+  if (!/^\d{16,19}$/.test(trackingId)) {
+    throw new Error("Tracking ID must contain 16 to 19 digits.");
   }
 
   return trackingId;

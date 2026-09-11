@@ -53,6 +53,14 @@ function createOperations(
       calls.push("move-message");
       return { id: "moved-message" };
     },
+    async findInboxMessages() {
+      calls.push("find-inbox");
+      return {
+        messageIds: [],
+        scannedMessageCount: 0,
+        scanComplete: true,
+      };
+    },
     async ensureRule() {
       calls.push("ensure-rule");
       return rule;
@@ -88,13 +96,87 @@ test("tracks a case by moving the message before enabling routing", async () => 
   const result = await trackCase("CASE-1", "message-1", operations);
 
   assert.equal(result.movedMessageId, "moved-message");
+  assert.deepEqual(result.sweep, {
+    scannedMessageCount: 0,
+    matchedMessageCount: 0,
+    movedMessageCount: 0,
+    failedMessageCount: 0,
+    scanComplete: true,
+    discoveryFailed: false,
+  });
   assert.deepEqual(operations.calls, [
     "get-state",
     "ensure-folder",
     "ensure-rule",
     "move-message",
     "set-rule:true",
+    "find-inbox",
   ]);
+});
+
+test("reports a partial Inbox sweep without failing Track", async () => {
+  const operations = createOperations({
+    location: "untracked",
+    folder: null,
+  });
+  operations.findInboxMessages = async () => {
+    operations.calls.push("find-inbox");
+    return {
+      messageIds: ["pending-1", "pending-2"],
+      scannedMessageCount: 250,
+      scanComplete: false,
+    };
+  };
+  operations.moveMessage = async (messageId) => {
+    operations.calls.push(`move-message:${messageId}`);
+    if (messageId === "pending-2") {
+      throw new Error("move failed");
+    }
+    return { id: `moved-${messageId}` };
+  };
+
+  const result = await trackCase("CASE-1", "selected", operations);
+
+  assert.deepEqual(result.sweep, {
+    scannedMessageCount: 250,
+    matchedMessageCount: 2,
+    movedMessageCount: 1,
+    failedMessageCount: 1,
+    scanComplete: false,
+    discoveryFailed: false,
+  });
+  assert.deepEqual(operations.calls, [
+    "get-state",
+    "ensure-folder",
+    "ensure-rule",
+    "move-message:selected",
+    "set-rule:true",
+    "find-inbox",
+    "move-message:pending-1",
+    "move-message:pending-2",
+  ]);
+});
+
+test("reports Inbox discovery failure without failing Track", async () => {
+  const operations = createOperations({
+    location: "untracked",
+    folder: null,
+  });
+  operations.findInboxMessages = async () => {
+    operations.calls.push("find-inbox");
+    throw new Error("discovery failed");
+  };
+
+  const result = await trackCase("CASE-1", "selected", operations);
+
+  assert.deepEqual(result.sweep, {
+    scannedMessageCount: 0,
+    matchedMessageCount: 0,
+    movedMessageCount: 0,
+    failedMessageCount: 0,
+    scanComplete: false,
+    discoveryFailed: true,
+  });
 });
 
 test("does not track a message into an archived case", async () => {

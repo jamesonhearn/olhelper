@@ -6,7 +6,11 @@ import {
   type CaseLocation,
   type MailFolder,
 } from "../graph/folders";
-import { moveMessage } from "../graph/messages";
+import {
+  findInboxMessagesByTrackingId,
+  moveMessage,
+  type InboxMessageSearchResult,
+} from "../graph/messages";
 import {
   deleteCaseRule,
   ensureCaseRule,
@@ -24,6 +28,10 @@ export interface CaseMailboxOperations {
     destination: Exclude<CaseLocation, "untracked">,
   ): Promise<MailFolder>;
   moveMessage(messageId: string, folderId: string): Promise<{ id: string }>;
+  findInboxMessages(
+    trackingId: string,
+    excludeId: string,
+  ): Promise<InboxMessageSearchResult>;
   ensureRule(trackingId: string, folderId: string): Promise<MessageRule>;
   findRule(trackingId: string): Promise<MessageRule | null>;
   setRuleEnabled(ruleId: string, enabled: boolean): Promise<MessageRule>;
@@ -40,6 +48,14 @@ export interface TrackCaseResult {
   folderId: string;
   ruleId: string;
   movedMessageId: string;
+  sweep: {
+    scannedMessageCount: number;
+    matchedMessageCount: number;
+    movedMessageCount: number;
+    failedMessageCount: number;
+    scanComplete: boolean;
+    discoveryFailed: boolean;
+  };
 }
 
 export interface CaseActionResult {
@@ -68,6 +84,8 @@ export const graphCaseMailboxOperations: CaseMailboxOperations = {
   setRuleEnabled: setCaseRuleEnabled,
   updateRuleTarget: updateCaseRuleTarget,
   deleteRule: deleteCaseRule,
+  findInboxMessages: (trackingId, excludeId) =>
+    findInboxMessagesByTrackingId(trackingId, excludeId),
 };
 
 export async function trackCase(
@@ -97,11 +115,42 @@ export async function trackCase(
     );
   }
 
+  const sweep: TrackCaseResult["sweep"] = {
+    scannedMessageCount: 0,
+    matchedMessageCount: 0,
+    movedMessageCount: 0,
+    failedMessageCount: 0,
+    scanComplete: false,
+    discoveryFailed: false,
+  };
+
+  try {
+    const search = await operations.findInboxMessages(
+      trackingId,
+      movedMessage.id,
+    );
+    sweep.scannedMessageCount = search.scannedMessageCount;
+    sweep.matchedMessageCount = search.messageIds.length;
+    sweep.scanComplete = search.scanComplete;
+
+    for (const pendingId of search.messageIds) {
+      try {
+        await operations.moveMessage(pendingId, folder.id);
+        sweep.movedMessageCount += 1;
+      } catch {
+        sweep.failedMessageCount += 1;
+      }
+    }
+  } catch {
+    sweep.discoveryFailed = true;
+  }
+
   return {
     trackingId,
     folderId: folder.id,
     ruleId: rule.id,
     movedMessageId: movedMessage.id,
+    sweep,
   };
 }
 
