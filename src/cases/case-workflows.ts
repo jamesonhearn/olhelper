@@ -104,17 +104,6 @@ export async function trackCase(
   const folder =
     state.folder ?? (await operations.ensureActiveFolder(trackingId));
   const rule = await operations.ensureRule(trackingId, folder.id);
-  const movedMessage = await operations.moveMessage(messageId, folder.id);
-
-  try {
-    await operations.setRuleEnabled(rule.id, true);
-  } catch (error) {
-    throw new Error(
-      `The message was moved, but routing could not be enabled for ${trackingId}. Use Repair routing before continuing.`,
-      { cause: error },
-    );
-  }
-
   const sweep: TrackCaseResult["sweep"] = {
     scannedMessageCount: 0,
     matchedMessageCount: 0,
@@ -123,26 +112,59 @@ export async function trackCase(
     scanComplete: false,
     discoveryFailed: false,
   };
+  let pendingMessageIds: string[] = [];
 
   try {
     const search = await operations.findInboxMessages(
       trackingId,
-      movedMessage.id,
+      messageId,
     );
+    pendingMessageIds = search.messageIds;
     sweep.scannedMessageCount = search.scannedMessageCount;
-    sweep.matchedMessageCount = search.messageIds.length;
+    sweep.matchedMessageCount = pendingMessageIds.length;
     sweep.scanComplete = search.scanComplete;
-
-    for (const pendingId of search.messageIds) {
-      try {
-        await operations.moveMessage(pendingId, folder.id);
-        sweep.movedMessageCount += 1;
-      } catch {
-        sweep.failedMessageCount += 1;
-      }
-    }
   } catch {
     sweep.discoveryFailed = true;
+  }
+
+  try {
+    await operations.setRuleEnabled(rule.id, true);
+  } catch (error) {
+    throw new Error(
+      `Routing could not be enabled for ${trackingId}. No messages were moved.`,
+      { cause: error },
+    );
+  }
+
+  for (const pendingId of pendingMessageIds) {
+    try {
+      await operations.moveMessage(pendingId, folder.id);
+      sweep.movedMessageCount += 1;
+    } catch {
+      sweep.failedMessageCount += 1;
+    }
+  }
+
+  let movedMessage: { id: string };
+
+  try {
+    movedMessage = await operations.moveMessage(messageId, folder.id);
+  } catch (error) {
+    if (!rule.isEnabled) {
+      try {
+        await operations.setRuleEnabled(rule.id, false);
+      } catch (rollbackError) {
+        throw new AggregateError(
+          [error, rollbackError],
+          `The selected message could not be moved and routing for ${trackingId} could not be disabled. Use Repair routing.`,
+        );
+      }
+    }
+
+    throw new Error(
+      `Routing was prepared, but the selected message could not be moved for ${trackingId}.`,
+      { cause: error },
+    );
   }
 
   return {

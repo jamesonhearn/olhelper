@@ -49,8 +49,8 @@ function createOperations(
       calls.push(`move-folder:${destination}`);
       return { ...folder, id: `${destination}-folder` };
     },
-    async moveMessage() {
-      calls.push("move-message");
+    async moveMessage(messageId) {
+      calls.push(`move-message:${messageId}`);
       return { id: "moved-message" };
     },
     async findInboxMessages() {
@@ -87,7 +87,7 @@ function createOperations(
   };
 }
 
-test("tracks a case by moving the message before enabling routing", async () => {
+test("finishes Inbox work before moving the selected message", async () => {
   const operations = createOperations({
     location: "untracked",
     folder: null,
@@ -108,9 +108,9 @@ test("tracks a case by moving the message before enabling routing", async () => 
     "get-state",
     "ensure-folder",
     "ensure-rule",
-    "move-message",
-    "set-rule:true",
     "find-inbox",
+    "set-rule:true",
+    "move-message:message-1",
   ]);
 });
 
@@ -149,11 +149,11 @@ test("reports a partial Inbox sweep without failing Track", async () => {
     "get-state",
     "ensure-folder",
     "ensure-rule",
-    "move-message:selected",
-    "set-rule:true",
     "find-inbox",
+    "set-rule:true",
     "move-message:pending-1",
     "move-message:pending-2",
+    "move-message:selected",
   ]);
 });
 
@@ -177,6 +177,39 @@ test("reports Inbox discovery failure without failing Track", async () => {
     scanComplete: false,
     discoveryFailed: true,
   });
+  assert.deepEqual(operations.calls, [
+    "get-state",
+    "ensure-folder",
+    "ensure-rule",
+    "find-inbox",
+    "set-rule:true",
+    "move-message:selected",
+  ]);
+});
+
+test("disables a newly enabled rule when the selected move fails", async () => {
+  const operations = createOperations({
+    location: "untracked",
+    folder: null,
+  });
+  operations.moveMessage = async (messageId) => {
+    operations.calls.push(`move-message:${messageId}`);
+    throw new Error("move failed");
+  };
+
+  await assert.rejects(
+    trackCase("CASE-1", "selected", operations),
+    /selected message could not be moved/,
+  );
+  assert.deepEqual(operations.calls, [
+    "get-state",
+    "ensure-folder",
+    "ensure-rule",
+    "find-inbox",
+    "set-rule:true",
+    "move-message:selected",
+    "set-rule:false",
+  ]);
 });
 
 test("does not track a message into an archived case", async () => {

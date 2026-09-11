@@ -81,10 +81,11 @@ Before using OLHelper with anything other than synthetic sandbox mail:
   advisories across both production and development dependencies. Continue to
   track the upstream package until a patched release is available.
 - Graph does not provide transactions across folder, rule, and message
-  operations. OLHelper orders operations to keep routing disabled until the
-  selected message is moved, reports exact partial-success states, and provides
-  Repair routing. A failed operation can still leave a reusable folder or a
-  disabled rule.
+  operations. OLHelper discovers prior Inbox matches before enabling routing,
+  sweeps those messages, and moves the selected message last because moving the
+  active Outlook item can invalidate the task-pane context. If that final move
+  fails, OLHelper attempts to disable a rule that it just enabled. Exact
+  partial-success states and Repair routing remain available.
 - The pilot now covers Track, status, Archive, Reopen, and Repair routing.
   Automated quota handling and duplicate/conflicting-folder remediation remain
   outside the pilot.
