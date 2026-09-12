@@ -65,10 +65,10 @@
               <Group id="OlHelper.Group">
                 <Label resid="Group.Label"/>
                 <Control xsi:type="Button" id="OlHelper.OpenTaskpane">
-                  <Label resid="TaskpaneButton.Label"/>
+                  <Label resid="Open.Label"/>
                   <Supertip>
-                    <Title resid="TaskpaneButton.Label"/>
-                    <Description resid="TaskpaneButton.Tooltip"/>
+                    <Title resid="Open.Label"/>
+                    <Description resid="Open.Tooltip"/>
                   </Supertip>
                   <Icon>
                     <bt:Image size="16" resid="Icon.16"/>
@@ -78,6 +78,95 @@
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="Taskpane.Url"/>
                   </Action>
+                </Control>
+                <Control xsi:type="Button" id="OlHelper.CheckStatus">
+                  <Label resid="Status.Label"/>
+                  <Supertip>
+                    <Title resid="Status.Label"/>
+                    <Description resid="Status.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16"/>
+                    <bt:Image size="32" resid="Icon.32"/>
+                    <bt:Image size="80" resid="Icon.80"/>
+                  </Icon>
+                  <Action xsi:type="ExecuteFunction">
+                    <FunctionName>checkCaseStatusCommand</FunctionName>
+                  </Action>
+                </Control>
+                <Control xsi:type="Menu" id="OlHelper.CaseActions">
+                  <Label resid="Actions.Label"/>
+                  <Supertip>
+                    <Title resid="Actions.Label"/>
+                    <Description resid="Actions.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16"/>
+                    <bt:Image size="32" resid="Icon.32"/>
+                    <bt:Image size="80" resid="Icon.80"/>
+                  </Icon>
+                  <Items>
+                    <Item id="OlHelper.Track">
+                      <Label resid="Track.Label"/>
+                      <Supertip>
+                        <Title resid="Track.Label"/>
+                        <Description resid="Track.Tooltip"/>
+                      </Supertip>
+                      <Icon>
+                        <bt:Image size="16" resid="Icon.16"/>
+                        <bt:Image size="32" resid="Icon.32"/>
+                        <bt:Image size="80" resid="Icon.80"/>
+                      </Icon>
+                      <Action xsi:type="ShowTaskpane">
+                        <SourceLocation resid="Taskpane.Track.Url"/>
+                      </Action>
+                    </Item>
+                    <Item id="OlHelper.Archive">
+                      <Label resid="Archive.Label"/>
+                      <Supertip>
+                        <Title resid="Archive.Label"/>
+                        <Description resid="Archive.Tooltip"/>
+                      </Supertip>
+                      <Icon>
+                        <bt:Image size="16" resid="Icon.16"/>
+                        <bt:Image size="32" resid="Icon.32"/>
+                        <bt:Image size="80" resid="Icon.80"/>
+                      </Icon>
+                      <Action xsi:type="ShowTaskpane">
+                        <SourceLocation resid="Taskpane.Archive.Url"/>
+                      </Action>
+                    </Item>
+                    <Item id="OlHelper.Reopen">
+                      <Label resid="Reopen.Label"/>
+                      <Supertip>
+                        <Title resid="Reopen.Label"/>
+                        <Description resid="Reopen.Tooltip"/>
+                      </Supertip>
+                      <Icon>
+                        <bt:Image size="16" resid="Icon.16"/>
+                        <bt:Image size="32" resid="Icon.32"/>
+                        <bt:Image size="80" resid="Icon.80"/>
+                      </Icon>
+                      <Action xsi:type="ShowTaskpane">
+                        <SourceLocation resid="Taskpane.Reopen.Url"/>
+                      </Action>
+                    </Item>
+                    <Item id="OlHelper.Repair">
+                      <Label resid="Repair.Label"/>
+                      <Supertip>
+                        <Title resid="Repair.Label"/>
+                        <Description resid="Repair.Tooltip"/>
+                      </Supertip>
+                      <Icon>
+                        <bt:Image size="16" resid="Icon.16"/>
+                        <bt:Image size="32" resid="Icon.32"/>
+                        <bt:Image size="80" resid="Icon.80"/>
+                      </Icon>
+                      <Action xsi:type="ShowTaskpane">
+                        <SourceLocation resid="Taskpane.Repair.Url"/>
+                      </Action>
+                    </Item>
+                  </Items>
                 </Control>
               </Group>
             </OfficeTab>
@@ -94,16 +183,192 @@
       <bt:Urls>
         <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
         <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
+        <bt:Url id="Taskpane.Track.Url" DefaultValue="https://localhost:3000/taskpane.html?action=track"/>
+        <bt:Url id="Taskpane.Archive.Url" DefaultValue="https://localhost:3000/taskpane.html?action=archive"/>
+        <bt:Url id="Taskpane.Reopen.Url" DefaultValue="https://localhost:3000/taskpane.html?action=reopen"/>
+        <bt:Url id="Taskpane.Repair.Url" DefaultValue="https://localhost:3000/taskpane.html?action=repair"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="Group.Label" DefaultValue="OLHelper"/>
-        <bt:String id="TaskpaneButton.Label" DefaultValue="Manage support case"/>
+        <bt:String id="Open.Label" DefaultValue="Open OLHelper"/>
+        <bt:String id="Status.Label" DefaultValue="Check status"/>
+        <bt:String id="Actions.Label" DefaultValue="Case actions"/>
+        <bt:String id="Track.Label" DefaultValue="Track case"/>
+        <bt:String id="Archive.Label" DefaultValue="Archive case"/>
+        <bt:String id="Reopen.Label" DefaultValue="Reopen case"/>
+        <bt:String id="Repair.Label" DefaultValue="Repair routing"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String
-          id="TaskpaneButton.Tooltip"
-          DefaultValue="Track, archive, reopen, and repair routing for a support case."/>
+        <bt:String id="Open.Tooltip" DefaultValue="Open the complete OLHelper case management pane."/>
+        <bt:String id="Status.Tooltip" DefaultValue="Check case folder and routing status without opening the task pane."/>
+        <bt:String id="Actions.Tooltip" DefaultValue="Open a confirmed OLHelper case lifecycle action."/>
+        <bt:String id="Track.Tooltip" DefaultValue="Create routing and move matching case messages after confirmation."/>
+        <bt:String id="Archive.Tooltip" DefaultValue="Stop routing and archive the case after confirmation."/>
+        <bt:String id="Reopen.Tooltip" DefaultValue="Restore an archived case and its routing after confirmation."/>
+        <bt:String id="Repair.Tooltip" DefaultValue="Repair the active case routing rule after confirmation."/>
       </bt:LongStrings>
     </Resources>
+    <VersionOverrides
+      xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1"
+      xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.5">
+          <bt:Set Name="Mailbox"/>
+        </bt:Sets>
+      </Requirements>
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <FunctionFile resid="Commands.Url"/>
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="OlHelper.Group">
+                  <Label resid="Group.Label"/>
+                  <Control xsi:type="Button" id="OlHelper.OpenTaskpane">
+                    <Label resid="Open.Label"/>
+                    <Supertip>
+                      <Title resid="Open.Label"/>
+                      <Description resid="Open.Tooltip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16"/>
+                      <bt:Image size="32" resid="Icon.32"/>
+                      <bt:Image size="80" resid="Icon.80"/>
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Taskpane.Url"/>
+                      <SupportsPinning>true</SupportsPinning>
+                    </Action>
+                  </Control>
+                  <Control xsi:type="Button" id="OlHelper.CheckStatus">
+                    <Label resid="Status.Label"/>
+                    <Supertip>
+                      <Title resid="Status.Label"/>
+                      <Description resid="Status.Tooltip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16"/>
+                      <bt:Image size="32" resid="Icon.32"/>
+                      <bt:Image size="80" resid="Icon.80"/>
+                    </Icon>
+                    <Action xsi:type="ExecuteFunction">
+                      <FunctionName>checkCaseStatusCommand</FunctionName>
+                    </Action>
+                  </Control>
+                  <Control xsi:type="Menu" id="OlHelper.CaseActions">
+                    <Label resid="Actions.Label"/>
+                    <Supertip>
+                      <Title resid="Actions.Label"/>
+                      <Description resid="Actions.Tooltip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16"/>
+                      <bt:Image size="32" resid="Icon.32"/>
+                      <bt:Image size="80" resid="Icon.80"/>
+                    </Icon>
+                    <Items>
+                      <Item id="OlHelper.Track">
+                        <Label resid="Track.Label"/>
+                        <Supertip>
+                          <Title resid="Track.Label"/>
+                          <Description resid="Track.Tooltip"/>
+                        </Supertip>
+                        <Icon>
+                          <bt:Image size="16" resid="Icon.16"/>
+                          <bt:Image size="32" resid="Icon.32"/>
+                          <bt:Image size="80" resid="Icon.80"/>
+                        </Icon>
+                        <Action xsi:type="ShowTaskpane">
+                          <SourceLocation resid="Taskpane.Track.Url"/>
+                        </Action>
+                      </Item>
+                      <Item id="OlHelper.Archive">
+                        <Label resid="Archive.Label"/>
+                        <Supertip>
+                          <Title resid="Archive.Label"/>
+                          <Description resid="Archive.Tooltip"/>
+                        </Supertip>
+                        <Icon>
+                          <bt:Image size="16" resid="Icon.16"/>
+                          <bt:Image size="32" resid="Icon.32"/>
+                          <bt:Image size="80" resid="Icon.80"/>
+                        </Icon>
+                        <Action xsi:type="ShowTaskpane">
+                          <SourceLocation resid="Taskpane.Archive.Url"/>
+                        </Action>
+                      </Item>
+                      <Item id="OlHelper.Reopen">
+                        <Label resid="Reopen.Label"/>
+                        <Supertip>
+                          <Title resid="Reopen.Label"/>
+                          <Description resid="Reopen.Tooltip"/>
+                        </Supertip>
+                        <Icon>
+                          <bt:Image size="16" resid="Icon.16"/>
+                          <bt:Image size="32" resid="Icon.32"/>
+                          <bt:Image size="80" resid="Icon.80"/>
+                        </Icon>
+                        <Action xsi:type="ShowTaskpane">
+                          <SourceLocation resid="Taskpane.Reopen.Url"/>
+                        </Action>
+                      </Item>
+                      <Item id="OlHelper.Repair">
+                        <Label resid="Repair.Label"/>
+                        <Supertip>
+                          <Title resid="Repair.Label"/>
+                          <Description resid="Repair.Tooltip"/>
+                        </Supertip>
+                        <Icon>
+                          <bt:Image size="16" resid="Icon.16"/>
+                          <bt:Image size="32" resid="Icon.32"/>
+                          <bt:Image size="80" resid="Icon.80"/>
+                        </Icon>
+                        <Action xsi:type="ShowTaskpane">
+                          <SourceLocation resid="Taskpane.Repair.Url"/>
+                        </Action>
+                      </Item>
+                    </Items>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+        </Host>
+      </Hosts>
+      <Resources>
+        <bt:Images>
+          <bt:Image id="Icon.16" DefaultValue="https://localhost:3000/assets/icon-16.png"/>
+          <bt:Image id="Icon.32" DefaultValue="https://localhost:3000/assets/icon-32.png"/>
+          <bt:Image id="Icon.80" DefaultValue="https://localhost:3000/assets/icon-80.png"/>
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
+          <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
+          <bt:Url id="Taskpane.Track.Url" DefaultValue="https://localhost:3000/taskpane.html?action=track"/>
+          <bt:Url id="Taskpane.Archive.Url" DefaultValue="https://localhost:3000/taskpane.html?action=archive"/>
+          <bt:Url id="Taskpane.Reopen.Url" DefaultValue="https://localhost:3000/taskpane.html?action=reopen"/>
+          <bt:Url id="Taskpane.Repair.Url" DefaultValue="https://localhost:3000/taskpane.html?action=repair"/>
+        </bt:Urls>
+        <bt:ShortStrings>
+          <bt:String id="Group.Label" DefaultValue="OLHelper"/>
+          <bt:String id="Open.Label" DefaultValue="Open OLHelper"/>
+          <bt:String id="Status.Label" DefaultValue="Check status"/>
+          <bt:String id="Actions.Label" DefaultValue="Case actions"/>
+          <bt:String id="Track.Label" DefaultValue="Track case"/>
+          <bt:String id="Archive.Label" DefaultValue="Archive case"/>
+          <bt:String id="Reopen.Label" DefaultValue="Reopen case"/>
+          <bt:String id="Repair.Label" DefaultValue="Repair routing"/>
+        </bt:ShortStrings>
+        <bt:LongStrings>
+          <bt:String id="Open.Tooltip" DefaultValue="Open the complete OLHelper case management pane."/>
+          <bt:String id="Status.Tooltip" DefaultValue="Check case folder and routing status without opening the task pane."/>
+          <bt:String id="Actions.Tooltip" DefaultValue="Open a confirmed OLHelper case lifecycle action."/>
+          <bt:String id="Track.Tooltip" DefaultValue="Create routing and move matching case messages after confirmation."/>
+          <bt:String id="Archive.Tooltip" DefaultValue="Stop routing and archive the case after confirmation."/>
+          <bt:String id="Reopen.Tooltip" DefaultValue="Restore an archived case and its routing after confirmation."/>
+          <bt:String id="Repair.Tooltip" DefaultValue="Repair the active case routing rule after confirmation."/>
+        </bt:LongStrings>
+      </Resources>
+    </VersionOverrides>
   </VersionOverrides>
 </OfficeApp>

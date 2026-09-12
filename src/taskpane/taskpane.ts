@@ -5,6 +5,7 @@ import {
   reopenCase,
   repairCaseRouting,
 } from "../cases/case-workflows";
+import { describeCaseStatus } from "../cases/case-status";
 import { trackSelectedCase } from "../cases/track-case";
 import {
   caseFolderName,
@@ -215,21 +216,19 @@ Office.onReady(() => {
     try {
       const state = await getCaseStatus(trackingId);
       showActionsForState(state.location, state.routing);
-      setStatus(
-        state.location === "untracked"
-          ? `Case ${trackingId} is not currently tracked.`
-          : state.location === "archived"
-            ? `Case ${trackingId} is archived and persistent routing is stopped.`
-            : state.routing === "enabled"
-              ? `Case ${trackingId} is active and routing is enabled.`
-              : `Case ${trackingId} is active, but routing needs repair.`,
-      );
+      setStatus(describeCaseStatus(trackingId, state));
     } catch (error) {
       setStatus(`Unable to check case status: ${getErrorMessage(error)}`);
     } finally {
       checkStatusButton.disabled = false;
     }
   });
+
+  const requestedAction = getRequestedAction();
+
+  if (requestedAction) {
+    getButton(`${requestedAction}-case`).click();
+  }
 });
 
 function showActionsForState(
@@ -292,6 +291,17 @@ function getButton(id: string): HTMLButtonElement {
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : "Unexpected error";
+}
+
+function getRequestedAction(): CaseAction | null {
+  const action = new URLSearchParams(window.location.search).get("action");
+
+  return action === "track" ||
+    action === "archive" ||
+    action === "reopen" ||
+    action === "repair"
+    ? action
+    : null;
 }
 
 function setStatus(message: string): void {
