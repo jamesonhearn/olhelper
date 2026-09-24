@@ -17,7 +17,7 @@
     "security:audit:all": "npm audit --audit-level=high"
   },
   "dependencies": {
-    "@azure/msal-browser": "^5.19.0"
+    "@azure/msal-browser": "^5.22.0"
   },
   "devDependencies": {
     "@types/node": "^26.4.0",
