@@ -1,4 +1,5 @@
 import {
+  BrowserCacheLocation,
   createNestablePublicClientApplication,
   InteractionRequiredAuthError,
   type IPublicClientApplication,
@@ -46,7 +47,7 @@ async function getMsal(): Promise<IPublicClientApplication> {
         authority: `https://login.microsoftonline.com/${tenantId}`,
       },
       cache: {
-        cacheLocation: "sessionStorage",
+        cacheLocation: BrowserCacheLocation.MemoryStorage,
       },
     });
   }

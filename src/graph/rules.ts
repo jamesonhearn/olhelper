@@ -5,15 +5,35 @@ export interface MessageRule {
   displayName: string;
   sequence: number;
   isEnabled: boolean;
-  actions?: {
+  isReadOnly?: boolean;
+  hasError?: boolean;
+  conditions?: Record<string, unknown>;
+  exceptions?: Record<string, unknown>;
+  actions?: Record<string, unknown> & {
     moveToFolder?: string;
+    stopProcessingRules?: boolean;
   };
 }
 
 interface RuleCollection {
-  value: MessageRule[];
+  value: MessageRuleSummary[];
   "@odata.nextLink"?: string;
 }
+
+type MessageRuleSummary = Pick<
+  MessageRule,
+  | "id"
+  | "displayName"
+  | "sequence"
+  | "isEnabled"
+  | "isReadOnly"
+  | "hasError"
+>;
+
+const ruleSummaryFields =
+  "id,displayName,sequence,isEnabled,isReadOnly,hasError";
+const ruleDetailFields =
+  `${ruleSummaryFields},conditions,exceptions,actions`;
 
 export function managedRuleName(trackingId: string): string {
   return `OLHelper | TrackingID#${trackingId}`;
@@ -32,10 +52,67 @@ export function isManagedRuleForTrackingId(
   );
 }
 
-async function listAllRules(): Promise<MessageRule[]> {
+function isConfigured(value: unknown): boolean {
+  if (value === undefined || value === null || value === false) {
+    return false;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  if (typeof value === "object") {
+    return Object.values(value as Record<string, unknown>).some(isConfigured);
+  }
+
+  return true;
+}
+
+function hasConfiguredFieldsOtherThan(
+  values: Record<string, unknown> | undefined,
+  allowedFields: ReadonlySet<string>,
+): boolean {
+  return Object.entries(values ?? {}).some(
+    ([name, value]) => !allowedFields.has(name) && isConfigured(value),
+  );
+}
+
+export function hasExpectedManagedRuleDefinition(
+  rule: MessageRule,
+  trackingId: string,
+): boolean {
+  const expectedSubject = `TrackingID#${trackingId}`;
+  const subjects = rule.conditions?.subjectContains;
+
+  return (
+    isManagedRuleForTrackingId(rule.displayName, trackingId) &&
+    rule.isReadOnly !== true &&
+    rule.hasError !== true &&
+    Array.isArray(subjects) &&
+    subjects.length === 1 &&
+    typeof subjects[0] === "string" &&
+    subjects[0].localeCompare(expectedSubject, undefined, {
+      sensitivity: "accent",
+    }) === 0 &&
+    !hasConfiguredFieldsOtherThan(
+      rule.conditions,
+      new Set(["subjectContains"]),
+    ) &&
+    !hasConfiguredFieldsOtherThan(rule.exceptions, new Set()) &&
+    typeof rule.actions?.moveToFolder === "string" &&
+    rule.actions.moveToFolder.length > 0 &&
+    rule.actions.stopProcessingRules !== true &&
+    !hasConfiguredFieldsOtherThan(
+      rule.actions,
+      new Set(["moveToFolder", "stopProcessingRules"]),
+    )
+  );
+}
+
+async function listAllRuleSummaries(): Promise<MessageRuleSummary[]> {
   let url: string | undefined =
-    "/me/mailFolders/inbox/messageRules";
-  const rules: MessageRule[] = [];
+    `/me/mailFolders/inbox/messageRules?$select=${ruleSummaryFields}`;
+  const rules: MessageRuleSummary[] = [];
 
   while (url) {
     const page: RuleCollection = await graphRequest<RuleCollection>(url);
@@ -46,18 +123,44 @@ async function listAllRules(): Promise<MessageRule[]> {
   return rules;
 }
 
+async function getRule(ruleId: string): Promise<MessageRule> {
+  return graphRequest<MessageRule>(
+    `/me/mailFolders/inbox/messageRules/${encodeURIComponent(ruleId)}` +
+      `?$select=${ruleDetailFields}`,
+  );
+}
+
+async function getManagedRuleCandidates(
+  summaries: MessageRuleSummary[],
+  trackingId: string,
+): Promise<MessageRule[]> {
+  const matching = summaries.filter((rule) =>
+    isManagedRuleForTrackingId(rule.displayName, trackingId),
+  );
+
+  if (matching.length > 1) {
+    throw new Error(`Multiple OLHelper rules exist for ${trackingId}.`);
+  }
+
+  const rules = await Promise.all(matching.map((rule) => getRule(rule.id)));
+
+  if (
+    rules.length === 1 &&
+    !hasExpectedManagedRuleDefinition(rules[0], trackingId)
+  ) {
+    throw new Error(
+      `A rule named for ${trackingId} has unexpected conditions or actions and will not be modified.`,
+    );
+  }
+
+  return rules;
+}
+
 export async function findCaseRule(
   trackingId: string,
 ): Promise<MessageRule | null> {
-  const displayName = managedRuleName(trackingId);
-  const existing = (await listAllRules()).filter(
-    (rule) =>
-      isManagedRuleForTrackingId(rule.displayName, trackingId),
-  );
-
-  if (existing.length > 1) {
-    throw new Error(`Multiple OLHelper rules exist for ${trackingId}.`);
-  }
+  const summaries = await listAllRuleSummaries();
+  const existing = await getManagedRuleCandidates(summaries, trackingId);
 
   return existing[0] ?? null;
 }
@@ -66,16 +169,9 @@ export async function ensureCaseRule(
   trackingId: string,
   folderId: string,
 ): Promise<MessageRule> {
-  const rules = await listAllRules();
+  const summaries = await listAllRuleSummaries();
   const displayName = managedRuleName(trackingId);
-  const existing = rules.filter(
-    (rule) =>
-      isManagedRuleForTrackingId(rule.displayName, trackingId),
-  );
-
-  if (existing.length > 1) {
-    throw new Error(`Multiple OLHelper rules exist for ${trackingId}.`);
-  }
+  const existing = await getManagedRuleCandidates(summaries, trackingId);
 
   if (existing.length === 1) {
     const rule = existing[0];
@@ -90,7 +186,7 @@ export async function ensureCaseRule(
   }
 
   const sequence =
-    Math.max(0, ...rules.map((rule) => rule.sequence ?? 0)) + 1;
+    Math.max(0, ...summaries.map((rule) => rule.sequence ?? 0)) + 1;
 
   return graphRequest<MessageRule>(
     "/me/mailFolders/inbox/messageRules",

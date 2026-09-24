@@ -14,6 +14,12 @@ import {
 import {
   type CaseLocation,
 } from "../graph/folders";
+import {
+  assertSelectedMessage,
+  getSelectedMessage,
+  type SelectedMessage,
+} from "../outlook/selected-message";
+import { getSafeErrorMessage } from "../security/safe-error";
 
 type CaseAction = "track" | "archive" | "reopen" | "repair";
 type RoutingState =
@@ -32,7 +38,7 @@ interface ActionDefinition {
 
 let confirmationTrigger: HTMLButtonElement | null = null;
 
-Office.onReady(() => {
+Office.onReady(async () => {
   initializeOfficeTheme();
 
   if (
@@ -56,7 +62,18 @@ Office.onReady(() => {
     return;
   }
 
-  const subject = item.subject ?? "";
+  let selectedMessage: SelectedMessage;
+
+  try {
+    selectedMessage = getSelectedMessage();
+    await registerItemChangedProtection();
+  } catch (error) {
+    setStatus(getSafeErrorMessage(error));
+    disableAllActions();
+    return;
+  }
+
+  const subject = selectedMessage.subject;
   const extractedTrackingId = extractTrackingId(subject);
 
   document.getElementById("subject")!.textContent = subject;
@@ -86,7 +103,7 @@ Office.onReady(() => {
         "OLHelper will create or reuse the active case folder, move the selected message, scan up to the 250 most recent Inbox messages for the complete TrackingID token, move matching messages, and enable persistent Inbox routing.",
       progress: "Creating case routing and moving the message...",
       run: async () => {
-        const result = await trackSelectedCase();
+        const result = await trackSelectedCase(selectedMessage);
         const { sweep } = result;
         let sweptNote = "";
 
@@ -184,17 +201,18 @@ Office.onReady(() => {
 
     const action = pendingAction;
     const definition = definitions[action];
-    confirmButton.disabled = true;
-    cancelButton.disabled = true;
-    setStatus(definition.progress);
 
     try {
+      assertSelectedMessage(selectedMessage);
+      confirmButton.disabled = true;
+      cancelButton.disabled = true;
+      setStatus(definition.progress);
       await definition.run();
       pendingAction = null;
       closeConfirmation();
     } catch (error) {
       const errorMessage =
-        `Unable to ${action} case: ${getErrorMessage(error)}`;
+        `Unable to ${action} case: ${getSafeErrorMessage(error)}`;
       pendingAction = null;
       closeConfirmation();
 
@@ -218,7 +236,7 @@ Office.onReady(() => {
       showActionsForState(state.location, state.routing);
       setStatus(describeCaseStatus(trackingId, state));
     } catch (error) {
-      setStatus(`Unable to check case status: ${getErrorMessage(error)}`);
+      setStatus(`Unable to check case status: ${getSafeErrorMessage(error)}`);
     } finally {
       checkStatusButton.disabled = false;
     }
@@ -226,10 +244,39 @@ Office.onReady(() => {
 
   const requestedAction = getRequestedAction();
 
+  setActionButtonsDisabled(false);
+
   if (requestedAction) {
     getButton(`${requestedAction}-case`).click();
   }
 });
+
+function registerItemChangedProtection(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    Office.context.mailbox.addHandlerAsync(
+      Office.EventType.ItemChanged,
+      () => {
+        document.getElementById("confirmation")!.hidden = true;
+        confirmationTrigger = null;
+        disableAllActions();
+        setStatus("The selected message changed. Reloading OLHelper...");
+        window.location.reload();
+      },
+      (result) => {
+        if (result.status === Office.AsyncResultStatus.Succeeded) {
+          resolve();
+          return;
+        }
+
+        reject(
+          new Error(
+            "OLHelper could not monitor message selection changes, so mailbox actions were disabled.",
+          ),
+        );
+      },
+    );
+  });
+}
 
 function showActionsForState(
   location: CaseLocation,
@@ -287,10 +334,6 @@ function disableAllActions(): void {
 
 function getButton(id: string): HTMLButtonElement {
   return document.getElementById(id) as HTMLButtonElement;
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Unexpected error";
 }
 
 function getRequestedAction(): CaseAction | null {

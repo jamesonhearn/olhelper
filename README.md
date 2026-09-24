@@ -25,9 +25,10 @@ rather than choosing between multiple folders for the same Tracking ID.
 
 - `package.json` declares the browser/runtime dependencies and the commands used
   to build, validate, serve, and sideload the add-in.
-- `manifest.xml` tells Outlook when and where to display OLHelper. All local
-  URLs point to the Webpack HTTPS server at `https://localhost:3000`. Production
-  and pilot deployments utilize a central Static Web App for hosting.
+- `appPackage/manifest.json` is the unified Microsoft 365 manifest that tells
+  Outlook when and where to display OLHelper. Its local URLs point to the
+  Webpack HTTPS server at `https://localhost:3000`; local and pilot package
+  generation inject the matching Entra client ID.
 - `webpack.config.js` compiles the TypeScript and CSS in `src/`, creates the
   task-pane and command HTML pages, copies icons, injects Entra identifiers, and
   serves the resulting files over trusted local HTTPS.
@@ -55,11 +56,15 @@ npm run validate
 npm start
 ```
 
-`npm start` starts the HTTPS development server and attempts to sideload
-`manifest.xml` into Outlook. Use `npm run stop` to stop the debugging session.
-To run only the local server for manual sideloading, use:
+`npm start` creates `appPackage/build/olhelper-local.zip`, starts the HTTPS
+development server, and attempts to sideload the unified package into Outlook.
+Use `npm run stop` to stop the debugging session.
+For manual sideloading, create and upload the local package first, then run only
+the local server:
 
 ```powershell
+npm run manifest:local
+# Upload appPackage/build/olhelper-local.zip through the Teams app store.
 npm run dev-server
 ```
 
@@ -67,10 +72,11 @@ The generated files are written to `dist/`. Do not edit that directory.
 
 ## Local and production URLs
 
-The checked-in manifest is intentionally configured only for the local pilot.
-For organizational deployment, every `https://localhost:3000` URL
-is replaced with an approved static hosting origin with a production 
-trusted-broker redirect URI to the Entra application:
+The checked-in manifest is a locally valid template with a placeholder Entra
+client ID. `npm run manifest:local` reads the real ID from `.env.local`. For
+organizational deployment, every `https://localhost:3000` URL is replaced with
+the approved static hosting origin and the protected environment supplies the
+Entra client ID. The registration must include this trusted-broker redirect:
 
 ```text
 brk-multihub://<production-origin>
@@ -87,7 +93,10 @@ the sandbox app registration controls NAA identity and delegated Graph access.
 See:
 
 - [Azure Static Web Apps pilot deployment](docs/deploy-azure-static-web-apps.md)
-- [Pilot security plan and release gates](docs/security.md)
+- [Security architecture and release gates](docs/security.md)
+- [Threat model and Graph permission justification](docs/threat-model.md)
 
-The deployment workflow generates `dist/manifest.pilot.xml` for the supplied
-HTTPS origin. The checked-in `manifest.xml` remains localhost-only.
+The deployment workflow generates
+`appPackage/build/olhelper-pilot.zip` for the protected HTTPS origin. The ZIP
+contains the generated `manifest.json` and required 32×32 outline and 192×192
+color icons; executable add-in assets remain in Azure Static Web Apps.

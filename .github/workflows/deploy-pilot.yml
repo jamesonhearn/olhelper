@@ -24,10 +24,10 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: 22.x
           cache: npm
@@ -48,22 +48,30 @@ jobs:
       - name: Generate hosted manifest
         env:
           OLHELPER_HOST_ORIGIN: ${{ vars.OLHELPER_HOST_ORIGIN }}
+          OLHELPER_CLIENT_ID: ${{ vars.OLHELPER_CLIENT_ID }}
         run: npm run manifest:hosted
 
       - name: Validate hosted manifest
-        run: npx office-addin-manifest validate dist/manifest.pilot.xml
+        run: npx office-addin-manifest validate appPackage/build/hosted/manifest.json
+
+      - name: Record release hashes
+        run: |
+          find dist -type f -print0 | sort -z | xargs -0 sha256sum > olhelper-release-sha256.txt
+          sha256sum appPackage/build/olhelper-pilot.zip >> olhelper-release-sha256.txt
 
       - name: Deploy static content
-        uses: Azure/static-web-apps-deploy@v1
+        uses: Azure/static-web-apps-deploy@1a947af9992250f3bc2e68ad0754c0b0c11566c9 # v1
         with:
           azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
           action: upload
           app_location: dist
           skip_app_build: true
 
-      - name: Publish hosted manifest
-        uses: actions/upload-artifact@v7
+      - name: Publish unified app package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
-          name: olhelper-pilot-manifest
-          path: dist/manifest.pilot.xml
+          name: olhelper-pilot-app-package
+          path: |
+            appPackage/build/olhelper-pilot.zip
+            olhelper-release-sha256.txt
           if-no-files-found: error

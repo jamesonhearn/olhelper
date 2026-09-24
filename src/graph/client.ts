@@ -2,6 +2,15 @@ import { getGraphToken } from "../auth/auth";
 
 const graphRoot = "https://graph.microsoft.com/v1.0";
 const graphOrigin = "https://graph.microsoft.com";
+const allowedGraphPaths = [
+  /^\/v1\.0\/me\/mailFolders$/,
+  /^\/v1\.0\/me\/mailFolders\/inbox\/messages$/,
+  /^\/v1\.0\/me\/mailFolders\/inbox\/messageRules$/,
+  /^\/v1\.0\/me\/mailFolders\/inbox\/messageRules\/[^/]+$/,
+  /^\/v1\.0\/me\/mailFolders\/[^/]+\/childFolders$/,
+  /^\/v1\.0\/me\/mailFolders\/[^/]+\/move$/,
+  /^\/v1\.0\/me\/messages\/[^/]+\/move$/,
+];
 
 export class GraphError extends Error {
   constructor(
@@ -16,8 +25,8 @@ export async function graphRequest<T>(
   pathOrUrl: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const token = await getGraphToken();
   const url = buildGraphUrl(pathOrUrl);
+  const token = await getGraphToken();
   const headers = new Headers(init.headers);
 
   headers.set("Authorization", `Bearer ${token}`);
@@ -44,21 +53,19 @@ export async function graphRequest<T>(
 }
 
 export function buildGraphUrl(pathOrUrl: string): string {
-  if (pathOrUrl.startsWith("/")) {
-    return `${graphRoot}${pathOrUrl}`;
-  }
-
   let url: URL;
 
   try {
-    url = new URL(pathOrUrl);
+    url = pathOrUrl.startsWith("/")
+      ? new URL(`${graphRoot}${pathOrUrl}`)
+      : new URL(pathOrUrl);
   } catch {
     throw new Error("Microsoft Graph URL is invalid.");
   }
 
   if (
     url.origin !== graphOrigin ||
-    !url.pathname.startsWith("/v1.0/") ||
+    !allowedGraphPaths.some((pattern) => pattern.test(url.pathname)) ||
     url.username ||
     url.password ||
     url.hash

@@ -1,0 +1,315 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/teams/v1.30/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.30",
+  "version": "1.0.0",
+  "id": "f83c2b3a-fc10-4c2b-af3d-621176d517ef",
+  "localizationInfo": {
+    "defaultLanguageTag": "en-us"
+  },
+  "developer": {
+    "name": "Jameson Hearn",
+    "websiteUrl": "https://github.com/jamesonhearn/olhelper",
+    "privacyUrl": "https://github.com/jamesonhearn/olhelper",
+    "termsOfUseUrl": "https://github.com/jamesonhearn/olhelper"
+  },
+  "name": {
+    "short": "OLHelper",
+    "full": "OLHelper"
+  },
+  "description": {
+    "short": "Route and manage support-case email by Tracking ID.",
+    "full": "Create support-case folders, configure persistent Inbox routing, manage existing messages, and archive or reopen cases by Tracking ID."
+  },
+  "icons": {
+    "outline": "assets/outline.png",
+    "color": "assets/color.png"
+  },
+  "accentColor": "#0078D4",
+  "validDomains": [
+    "localhost:3000"
+  ],
+  "authorization": {
+    "permissions": {
+      "resourceSpecific": [
+        {
+          "name": "MailboxItem.Read.User",
+          "type": "Delegated"
+        }
+      ]
+    }
+  },
+  "webApplicationInfo": {
+    "id": "00000000-0000-0000-0000-000000000000"
+  },
+  "extensions": [
+    {
+      "requirements": {
+        "capabilities": [
+          {
+            "name": "Mailbox",
+            "minVersion": "1.5"
+          }
+        ],
+        "scopes": [
+          "mail"
+        ]
+      },
+      "runtimes": [
+        {
+          "id": "commandsRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://localhost:3000/commands.html"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "checkCaseStatusCommand",
+              "type": "executeFunction",
+              "displayName": "Check case status",
+              "multiselect": false,
+              "supportsNoItemContext": false
+            }
+          ]
+        },
+        {
+          "id": "taskpaneRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://localhost:3000/taskpane.html"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "openOlHelper",
+              "type": "openPage",
+              "displayName": "Open OLHelper",
+              "pinnable": true,
+              "multiselect": false,
+              "supportsNoItemContext": false
+            }
+          ]
+        },
+        {
+          "id": "trackRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://localhost:3000/taskpane.html?action=track"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "trackCase",
+              "type": "openPage",
+              "displayName": "Track case",
+              "pinnable": false,
+              "multiselect": false,
+              "supportsNoItemContext": false
+            }
+          ]
+        },
+        {
+          "id": "archiveRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://localhost:3000/taskpane.html?action=archive"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "archiveCase",
+              "type": "openPage",
+              "displayName": "Archive case",
+              "pinnable": false,
+              "multiselect": false,
+              "supportsNoItemContext": false
+            }
+          ]
+        },
+        {
+          "id": "reopenRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://localhost:3000/taskpane.html?action=reopen"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "reopenCase",
+              "type": "openPage",
+              "displayName": "Reopen case",
+              "pinnable": false,
+              "multiselect": false,
+              "supportsNoItemContext": false
+            }
+          ]
+        },
+        {
+          "id": "repairRuntime",
+          "type": "general",
+          "code": {
+            "page": "https://localhost:3000/taskpane.html?action=repair"
+          },
+          "lifetime": "short",
+          "actions": [
+            {
+              "id": "repairRouting",
+              "type": "openPage",
+              "displayName": "Repair routing",
+              "pinnable": false,
+              "multiselect": false,
+              "supportsNoItemContext": false
+            }
+          ]
+        }
+      ],
+      "ribbons": [
+        {
+          "requirements": {
+            "capabilities": [
+              {
+                "name": "Mailbox",
+                "minVersion": "1.5"
+              }
+            ],
+            "scopes": [
+              "mail"
+            ],
+            "formFactors": [
+              "desktop"
+            ]
+          },
+          "contexts": [
+            "mailRead"
+          ],
+          "tabs": [
+            {
+              "builtInTabId": "TabDefault",
+              "groups": [
+                {
+                  "id": "OlHelper.Group",
+                  "label": "OLHelper",
+                  "controls": [
+                    {
+                      "id": "OlHelper.OpenTaskpane",
+                      "type": "button",
+                      "label": "Open OLHelper",
+                      "icons": [
+                        {
+                          "size": 16,
+                          "url": "https://localhost:3000/assets/icon-16.png"
+                        },
+                        {
+                          "size": 32,
+                          "url": "https://localhost:3000/assets/icon-32.png"
+                        },
+                        {
+                          "size": 80,
+                          "url": "https://localhost:3000/assets/icon-80.png"
+                        }
+                      ],
+                      "supertip": {
+                        "title": "Open OLHelper",
+                        "description": "Open the complete OLHelper case management pane."
+                      },
+                      "actionId": "openOlHelper"
+                    },
+                    {
+                      "id": "OlHelper.CheckStatus",
+                      "type": "button",
+                      "label": "Check status",
+                      "icons": [
+                        {
+                          "size": 16,
+                          "url": "https://localhost:3000/assets/icon-16.png"
+                        },
+                        {
+                          "size": 32,
+                          "url": "https://localhost:3000/assets/icon-32.png"
+                        },
+                        {
+                          "size": 80,
+                          "url": "https://localhost:3000/assets/icon-80.png"
+                        }
+                      ],
+                      "supertip": {
+                        "title": "Check status",
+                        "description": "Check case folder and routing status without opening the task pane."
+                      },
+                      "actionId": "checkCaseStatusCommand"
+                    },
+                    {
+                      "id": "OlHelper.CaseActions",
+                      "type": "menu",
+                      "label": "Case actions",
+                      "icons": [
+                        {
+                          "size": 16,
+                          "url": "https://localhost:3000/assets/icon-16.png"
+                        },
+                        {
+                          "size": 32,
+                          "url": "https://localhost:3000/assets/icon-32.png"
+                        },
+                        {
+                          "size": 80,
+                          "url": "https://localhost:3000/assets/icon-80.png"
+                        }
+                      ],
+                      "supertip": {
+                        "title": "Case actions",
+                        "description": "Open a confirmed OLHelper case lifecycle action."
+                      },
+                      "items": [
+                        {
+                          "id": "OlHelper.Track",
+                          "type": "menuItem",
+                          "label": "Track case",
+                          "supertip": {
+                            "title": "Track case",
+                            "description": "Create routing and move matching case messages after confirmation."
+                          },
+                          "actionId": "trackCase"
+                        },
+                        {
+                          "id": "OlHelper.Archive",
+                          "type": "menuItem",
+                          "label": "Archive case",
+                          "supertip": {
+                            "title": "Archive case",
+                            "description": "Stop routing and archive the case after confirmation."
+                          },
+                          "actionId": "archiveCase"
+                        },
+                        {
+                          "id": "OlHelper.Reopen",
+                          "type": "menuItem",
+                          "label": "Reopen case",
+                          "supertip": {
+                            "title": "Reopen case",
+                            "description": "Restore an archived case and its routing after confirmation."
+                          },
+                          "actionId": "reopenCase"
+                        },
+                        {
+                          "id": "OlHelper.Repair",
+                          "type": "menuItem",
+                          "label": "Repair routing",
+                          "supertip": {
+                            "title": "Repair routing",
+                            "description": "Repair the active case routing rule after confirmation."
+                          },
+                          "actionId": "repairRouting"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

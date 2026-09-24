@@ -4,6 +4,7 @@ import {
   caseFolderName,
   extractTrackingId,
 } from "../cases/tracking-id";
+import { getSafeErrorMessage } from "../security/safe-error";
 
 const STATUS_NOTIFICATION_KEY = "olhelper-case-status";
 const MAX_NOTIFICATION_LENGTH = 150;
@@ -53,7 +54,7 @@ async function checkCaseStatusCommand(
     const details: Office.NotificationMessageDetails = {
       type: Office.MailboxEnums.ItemNotificationMessageType.ErrorMessage,
       message: truncateNotification(
-        `Unable to check case status: ${getErrorMessage(error)}`,
+        `Unable to check case status: ${getSafeErrorMessage(error)}`,
       ),
     };
 
@@ -123,8 +124,4 @@ function truncateNotification(message: string): string {
   return message.length <= MAX_NOTIFICATION_LENGTH
     ? message
     : `${message.slice(0, MAX_NOTIFICATION_LENGTH - 3)}...`;
-}
-
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : "Unexpected error";
 }

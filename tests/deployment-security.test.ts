@@ -17,15 +17,19 @@ test("deployment origin comes from the protected pilot environment", () => {
     deploymentWorkflow,
     /OLHELPER_HOST_ORIGIN:\s*\${{\s*vars\.OLHELPER_HOST_ORIGIN\s*}}/,
   );
+  assert.match(
+    deploymentWorkflow,
+    /OLHELPER_CLIENT_ID:\s*\${{\s*vars\.OLHELPER_CLIENT_ID\s*}}/,
+  );
 });
 
-test("hosted manifest generation does not accept an origin argument", () => {
+test("hosted package generation does not accept an origin argument", () => {
   assert.match(
     manifestGenerator,
     /process\.env\.OLHELPER_HOST_ORIGIN/,
   );
-  assert.doesNotMatch(
-    manifestGenerator,
-    /const\s+\[\s*,\s*,\s*originArgument/,
-  );
+  assert.match(manifestGenerator, /process\.env\.OLHELPER_CLIENT_ID/);
+  assert.doesNotMatch(manifestGenerator, /originArgument\s*=\s*process\.argv/);
+  assert.match(manifestGenerator, /olhelper-pilot\.zip/);
+  assert.match(deploymentWorkflow, /appPackage\/build\/olhelper-pilot\.zip/);
 });

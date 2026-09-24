@@ -1,9 +1,10 @@
 import { caseFolderName, extractTrackingId } from "./tracking-id";
 import { trackCase, type TrackCaseResult } from "./case-workflows";
-import { getSelectedMessage } from "../outlook/selected-message";
+import type { SelectedMessage } from "../outlook/selected-message";
 
-export async function trackSelectedCase(): Promise<TrackCaseResult> {
-  const message = getSelectedMessage();
+export async function trackSelectedCase(
+  message: SelectedMessage,
+): Promise<TrackCaseResult> {
   const trackingId = extractTrackingId(message.subject);
 
   if (!trackingId) {

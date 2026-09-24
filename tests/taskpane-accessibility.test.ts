@@ -82,3 +82,29 @@ test("uses and monitors the Outlook Office theme when supported", () => {
   assert.match(script, /Office\.EventType\.OfficeThemeChanged/);
   assert.match(script, /applyOfficeTheme\(event\.officeTheme\)/);
 });
+
+test("fails closed when a pinned pane changes selected messages", () => {
+  assert.match(script, /Office\.EventType\.ItemChanged/);
+  assert.match(script, /assertSelectedMessage\(selectedMessage\)/);
+  assert.match(script, /disableAllActions\(\)/);
+  assert.match(script, /window\.location\.reload\(\)/);
+});
+
+test("keeps mailbox actions disabled until Office initialization completes", () => {
+  for (const id of [
+    "check-status",
+    "track-case",
+    "archive-case",
+    "reopen-case",
+    "repair-case",
+  ]) {
+    assert.match(
+      html,
+      new RegExp(`<button[^>]*id="${id}"[^>]*disabled`),
+    );
+  }
+});
+
+test("does not display raw token or broker telemetry errors", () => {
+  assert.match(script, /getSafeErrorMessage/);
+});

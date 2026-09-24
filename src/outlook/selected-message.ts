@@ -1,4 +1,5 @@
 export interface SelectedMessage {
+  outlookItemId: string;
   graphMessageId: string;
   subject: string;
 }
@@ -27,7 +28,22 @@ export function getSelectedMessage(): SelectedMessage {
   );
 
   return {
+    outlookItemId,
     graphMessageId,
     subject,
   };
+}
+
+export function assertSelectedMessage(expected: SelectedMessage): void {
+  const current = getSelectedMessage();
+
+  if (
+    current.outlookItemId !== expected.outlookItemId ||
+    current.graphMessageId !== expected.graphMessageId ||
+    current.subject !== expected.subject
+  ) {
+    throw new Error(
+      "The selected Outlook message changed. Review the new message before continuing.",
+    );
+  }
 }

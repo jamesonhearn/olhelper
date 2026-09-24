@@ -1,5 +1,6 @@
 node_modules/
 dist/
+appPackage/build/
 .env.local
 npm-debug.log*
 .DS_Store
