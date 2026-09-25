@@ -93,13 +93,18 @@ user-agent information; they must not contain mailbox data.
   IndexedDB, cookies, URLs, application logs, or telemetry.
 - A token is attached only by the central Graph client and only to an allowed
   `https://graph.microsoft.com/v1.0` request.
-- After every completed Graph workflow, including status checks and failed
-  mutations, OLHelper disables further mailbox actions and automatically
-  navigates within 10 seconds to a static session-ended document that loads no
-  Office.js, MSAL, or application JavaScript. An explicit **End secure session**
-  control performs the same navigation immediately. Session termination is
-  disabled while a Graph workflow is active so it cannot interrupt a
-  multi-request folder, rule, or message operation.
+- Read-only status checks keep the task-pane session active so the user can
+  proceed directly to Track, Archive, Reopen, or Repair. After a completed
+  mailbox mutation, including a failed mutation, OLHelper disables further
+  mailbox actions, displays an accessible ten-second visual countdown, and
+  navigates to a minimal session-ended document. An explicit **End secure
+  session** control performs the same navigation immediately. Session
+  termination is disabled while a Graph workflow is active so it cannot
+  interrupt a multi-request folder, rule, or message operation.
+- The session-ended document initializes Office.js so Outlook recognizes it as
+  a valid add-in page, but it does not load MSAL, Graph, case-workflow, or
+  task-pane application code. It applies Office theme colors when available,
+  with light, dark, forced-color, keyboard-focus, and reduced-motion fallbacks.
 - Replacing the authenticated task-pane document destroys its JavaScript
   context and makes its memory-only MSAL cache unavailable without requiring
   Outlook to close. The application does not claim cryptographic process-memory

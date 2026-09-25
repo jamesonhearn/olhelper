@@ -39,6 +39,7 @@ interface ActionDefinition {
 let confirmationTrigger: HTMLButtonElement | null = null;
 let sessionEndTimer: number | undefined;
 let secureOperationActive = false;
+let mutationOperationActive = false;
 
 Office.onReady(async (info) => {
   const endSessionButton = getButton("end-session");
@@ -216,7 +217,7 @@ Office.onReady(async (info) => {
 
     try {
       assertSelectedMessage(selectedMessage);
-      beginSecureOperation();
+      beginSecureOperation(true);
       confirmButton.disabled = true;
       cancelButton.disabled = true;
       setStatus(definition.progress);
@@ -243,7 +244,7 @@ Office.onReady(async (info) => {
   });
 
   checkStatusButton.addEventListener("click", async () => {
-    beginSecureOperation();
+    beginSecureOperation(false);
     checkStatusButton.disabled = true;
     setStatus("Checking case status...");
 
@@ -254,7 +255,7 @@ Office.onReady(async (info) => {
     } catch (error) {
       setStatus(`Unable to check case status: ${getSafeErrorMessage(error)}`);
     } finally {
-      scheduleSecureSessionEnd();
+      finishReadOnlyOperation();
     }
   });
 
@@ -272,6 +273,11 @@ function registerItemChangedProtection(): Promise<void> {
     Office.context.mailbox.addHandlerAsync(
       Office.EventType.ItemChanged,
       () => {
+        if (mutationOperationActive) {
+          disableAllActions();
+          return;
+        }
+
         document.getElementById("confirmation")!.hidden = true;
         confirmationTrigger = null;
         disableAllActions();
@@ -350,6 +356,7 @@ function disableAllActions(): void {
 
 function scheduleSecureSessionEnd(): void {
   secureOperationActive = false;
+  mutationOperationActive = false;
   disableAllActions();
   getButton("end-session").disabled = false;
   document.getElementById("confirmation")!.hidden = true;
@@ -358,13 +365,25 @@ function scheduleSecureSessionEnd(): void {
   const currentMessage = status.textContent?.trim();
   status.textContent =
     `${currentMessage ? `${currentMessage} ` : ""}` +
-    "The secure session will end automatically in 10 seconds.";
+    "The secure session will end automatically.";
 
-  if (sessionEndTimer !== undefined) {
-    window.clearTimeout(sessionEndTimer);
-  }
+  clearSessionEndTimer();
 
-  sessionEndTimer = window.setTimeout(endSecureSession, 10_000);
+  const countdown = document.getElementById("session-countdown")!;
+  let secondsRemaining = 10;
+  countdown.hidden = false;
+  countdown.textContent = `Session ending in ${secondsRemaining} seconds.`;
+
+  sessionEndTimer = window.setInterval(() => {
+    secondsRemaining -= 1;
+
+    if (secondsRemaining <= 0) {
+      endSecureSession();
+      return;
+    }
+
+    countdown.textContent = `Session ending in ${secondsRemaining} seconds.`;
+  }, 1_000);
 }
 
 function endSecureSession(): void {
@@ -372,10 +391,7 @@ function endSecureSession(): void {
     return;
   }
 
-  if (sessionEndTimer !== undefined) {
-    window.clearTimeout(sessionEndTimer);
-    sessionEndTimer = undefined;
-  }
+  clearSessionEndTimer();
 
   disableAllActions();
   getButton("end-session").disabled = true;
@@ -384,12 +400,25 @@ function endSecureSession(): void {
   );
 }
 
-function beginSecureOperation(): void {
+function beginSecureOperation(isMutation: boolean): void {
   secureOperationActive = true;
+  mutationOperationActive = isMutation;
+  setActionButtonsDisabled(true);
   getButton("end-session").disabled = true;
+  document.getElementById("session-countdown")!.hidden = true;
+  clearSessionEndTimer();
+}
 
+function finishReadOnlyOperation(): void {
+  secureOperationActive = false;
+  mutationOperationActive = false;
+  setActionButtonsDisabled(false);
+  getButton("end-session").disabled = false;
+}
+
+function clearSessionEndTimer(): void {
   if (sessionEndTimer !== undefined) {
-    window.clearTimeout(sessionEndTimer);
+    window.clearInterval(sessionEndTimer);
     sessionEndTimer = undefined;
   }
 }

@@ -32,6 +32,7 @@ module.exports = async (_env, argv) => {
     entry: {
       taskpane: "./src/taskpane/taskpane.ts",
       commands: "./src/commands/commands.ts",
+      sessionEnded: "./src/session-ended/session-ended.ts",
     },
     output: {
       clean: true,
@@ -82,12 +83,16 @@ module.exports = async (_env, argv) => {
         template: "./src/commands/commands.html",
         chunks: ["commands"],
       }),
+      new HtmlWebpackPlugin({
+        filename: "session-ended.html",
+        template: "./src/session-ended/session-ended.html",
+        chunks: ["sessionEnded"],
+      }),
       new CopyWebpackPlugin({
         patterns: [
           { from: "assets", to: "assets" },
           { from: "src/index.html", to: "index.html" },
           { from: "src/404.html", to: "404.html" },
-          { from: "src/session-ended.html", to: "session-ended.html" },
           { from: "staticwebapp.config.json", to: "staticwebapp.config.json" },
         ],
       }),

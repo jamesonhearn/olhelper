@@ -193,6 +193,12 @@ button.secondary:hover:not(:disabled) {
   overflow-wrap: anywhere;
 }
 
+#session-countdown {
+  margin: 4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
 @media (max-width: 320px) {
   main {
     padding: 12px;

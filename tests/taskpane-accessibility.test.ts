@@ -5,6 +5,18 @@ import test from "node:test";
 const css = readFileSync("src/taskpane/taskpane.css", "utf8");
 const html = readFileSync("src/taskpane/taskpane.html", "utf8");
 const script = readFileSync("src/taskpane/taskpane.ts", "utf8");
+const sessionEndedCss = readFileSync(
+  "src/session-ended/session-ended.css",
+  "utf8",
+);
+const sessionEndedHtml = readFileSync(
+  "src/session-ended/session-ended.html",
+  "utf8",
+);
+const sessionEndedScript = readFileSync(
+  "src/session-ended/session-ended.ts",
+  "utf8",
+);
 
 function getColor(block: string, property: string): string {
   const match = new RegExp(`${property}:\\s*(#[0-9a-f]{6})`, "i").exec(block);
@@ -75,6 +87,7 @@ test("exposes status and confirmation changes to assistive technology", () => {
   assert.match(html, /role="alertdialog"/);
   assert.match(html, /aria-labelledby="confirmation-message"/);
   assert.match(html, /aria-describedby="confirmation-details"/);
+  assert.match(html, /id="session-countdown" aria-live="off" hidden/);
 });
 
 test("uses and monitors the Outlook Office theme when supported", () => {
@@ -119,9 +132,24 @@ test("provides an explicit secure-session termination control", () => {
   assert.match(html, /id="end-session"/);
   assert.match(script, /addEventListener\("click", endSecureSession\)/);
   assert.match(script, /secureOperationActive = true/);
+  assert.match(script, /mutationOperationActive = isMutation/);
   assert.match(
     script,
     /if \(secureOperationActive\)\s*\{\s*return;\s*\}/,
   );
   assert.match(script, /getButton\("end-session"\)\.disabled = true/);
+  assert.match(script, /if \(mutationOperationActive\)/);
+  assert.match(script, /Session ending in \$\{secondsRemaining\} seconds/);
+});
+
+test("provides an accessible, theme-aware session-ended page", () => {
+  assert.match(sessionEndedHtml, /id="close-pane"/);
+  assert.match(sessionEndedHtml, /role="status"/);
+  assert.match(sessionEndedCss, /color-scheme:\s*light dark/);
+  assert.match(sessionEndedCss, /@media \(prefers-color-scheme:\s*dark\)/);
+  assert.match(sessionEndedCss, /@media \(forced-colors:\s*active\)/);
+  assert.match(sessionEndedCss, /button:focus-visible/);
+  assert.match(sessionEndedScript, /Office\.onReady/);
+  assert.match(sessionEndedScript, /Office\.EventType\.OfficeThemeChanged/);
+  assert.match(sessionEndedScript, /Office\.context\.ui\.closeContainer\(\)/);
 });
