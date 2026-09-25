@@ -37,8 +37,20 @@ interface ActionDefinition {
 }
 
 let confirmationTrigger: HTMLButtonElement | null = null;
+let sessionEndTimer: number | undefined;
+let secureOperationActive = false;
 
-Office.onReady(async () => {
+Office.onReady(async (info) => {
+  const endSessionButton = getButton("end-session");
+  endSessionButton.disabled = false;
+  endSessionButton.addEventListener("click", endSecureSession);
+
+  if (info.host !== Office.HostType.Outlook) {
+    setStatus("OLHelper can run only in Microsoft Outlook.");
+    disableAllActions();
+    return;
+  }
+
   initializeOfficeTheme();
 
   if (
@@ -204,12 +216,14 @@ Office.onReady(async () => {
 
     try {
       assertSelectedMessage(selectedMessage);
+      beginSecureOperation();
       confirmButton.disabled = true;
       cancelButton.disabled = true;
       setStatus(definition.progress);
       await definition.run();
       pendingAction = null;
       closeConfirmation();
+      scheduleSecureSessionEnd();
     } catch (error) {
       const errorMessage =
         `Unable to ${action} case: ${getSafeErrorMessage(error)}`;
@@ -224,10 +238,12 @@ Office.onReady(async () => {
       }
 
       setStatus(errorMessage);
+      scheduleSecureSessionEnd();
     }
   });
 
   checkStatusButton.addEventListener("click", async () => {
+    beginSecureOperation();
     checkStatusButton.disabled = true;
     setStatus("Checking case status...");
 
@@ -238,7 +254,7 @@ Office.onReady(async () => {
     } catch (error) {
       setStatus(`Unable to check case status: ${getSafeErrorMessage(error)}`);
     } finally {
-      checkStatusButton.disabled = false;
+      scheduleSecureSessionEnd();
     }
   });
 
@@ -330,6 +346,52 @@ function setActionButtonsDisabled(disabled: boolean): void {
 
 function disableAllActions(): void {
   setActionButtonsDisabled(true);
+}
+
+function scheduleSecureSessionEnd(): void {
+  secureOperationActive = false;
+  disableAllActions();
+  getButton("end-session").disabled = false;
+  document.getElementById("confirmation")!.hidden = true;
+
+  const status = document.getElementById("status")!;
+  const currentMessage = status.textContent?.trim();
+  status.textContent =
+    `${currentMessage ? `${currentMessage} ` : ""}` +
+    "The secure session will end automatically in 10 seconds.";
+
+  if (sessionEndTimer !== undefined) {
+    window.clearTimeout(sessionEndTimer);
+  }
+
+  sessionEndTimer = window.setTimeout(endSecureSession, 10_000);
+}
+
+function endSecureSession(): void {
+  if (secureOperationActive) {
+    return;
+  }
+
+  if (sessionEndTimer !== undefined) {
+    window.clearTimeout(sessionEndTimer);
+    sessionEndTimer = undefined;
+  }
+
+  disableAllActions();
+  getButton("end-session").disabled = true;
+  window.location.replace(
+    new URL("session-ended.html", window.location.href).href,
+  );
+}
+
+function beginSecureOperation(): void {
+  secureOperationActive = true;
+  getButton("end-session").disabled = true;
+
+  if (sessionEndTimer !== undefined) {
+    window.clearTimeout(sessionEndTimer);
+    sessionEndTimer = undefined;
+  }
 }
 
 function getButton(id: string): HTMLButtonElement {

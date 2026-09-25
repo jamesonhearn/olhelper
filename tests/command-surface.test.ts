@@ -117,7 +117,10 @@ test("completes the function command and reports status through Outlook", () => 
   assert.match(commands, /ProgressIndicator/);
   assert.match(commands, /InformationalMessage/);
   assert.match(commands, /ErrorMessage/);
-  assert.match(commands, /finally\s*\{\s*event\.completed\(\)/);
+  assert.match(
+    commands,
+    /finally\s*\{\s*releaseGraphAuthenticationContext\(\);\s*event\.completed\(\)/,
+  );
 });
 
 test("task-pane action links only accept known lifecycle actions", () => {

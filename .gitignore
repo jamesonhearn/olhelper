@@ -4,3 +4,4 @@ appPackage/build/
 .env.local
 npm-debug.log*
 .DS_Store
+docs/threat-model.md

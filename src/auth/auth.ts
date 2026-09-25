@@ -71,3 +71,7 @@ export async function getGraphToken(): Promise<string> {
     return result.accessToken;
   }
 }
+
+export function releaseGraphAuthenticationContext(): void {
+  msal = undefined;
+}

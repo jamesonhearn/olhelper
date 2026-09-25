@@ -43,6 +43,7 @@ jobs:
           npm run typecheck
           npm test
           npm run security:audit
+          npm run security:audit:all
           npm run build
 
       - name: Generate hosted manifest

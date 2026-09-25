@@ -90,6 +90,11 @@ test("fails closed when a pinned pane changes selected messages", () => {
   assert.match(script, /window\.location\.reload\(\)/);
 });
 
+test("fails closed outside the Outlook host", () => {
+  assert.match(script, /info\.host !== Office\.HostType\.Outlook/);
+  assert.match(script, /OLHelper can run only in Microsoft Outlook/);
+});
+
 test("keeps mailbox actions disabled until Office initialization completes", () => {
   for (const id of [
     "check-status",
@@ -97,6 +102,7 @@ test("keeps mailbox actions disabled until Office initialization completes", () 
     "archive-case",
     "reopen-case",
     "repair-case",
+    "end-session",
   ]) {
     assert.match(
       html,
@@ -107,4 +113,15 @@ test("keeps mailbox actions disabled until Office initialization completes", () 
 
 test("does not display raw token or broker telemetry errors", () => {
   assert.match(script, /getSafeErrorMessage/);
+});
+
+test("provides an explicit secure-session termination control", () => {
+  assert.match(html, /id="end-session"/);
+  assert.match(script, /addEventListener\("click", endSecureSession\)/);
+  assert.match(script, /secureOperationActive = true/);
+  assert.match(
+    script,
+    /if \(secureOperationActive\)\s*\{\s*return;\s*\}/,
+  );
+  assert.match(script, /getButton\("end-session"\)\.disabled = true/);
 });

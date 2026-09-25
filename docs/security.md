@@ -1,4 +1,4 @@
-# OLHelper security architecture
+# OLHelper Security and Architecture
 
 ## Security position
 
@@ -11,9 +11,8 @@ OLHelper has no application backend, database, client secret, managed identity,
 app-only Graph permission, or centralized mailbox-data store. The static host
 does not receive Graph tokens or Graph responses. Tokens and mailbox data do
 enter the hosted JavaScript process, so integrity of the deployed origin and
-every runtime dependency is a primary security boundary.
+every runtime dependency is the primary security boundary.
 
-The detailed threat analysis is in [Threat model](threat-model.md).
 
 ## Authorization and permission justification
 
@@ -32,8 +31,30 @@ There is no documented delegated mailbox-RSC replacement for these operations.
 Exchange Online RBAC for Applications is an app-only mailbox-scoping model. It
 would require a confidential backend or managed identity, application
 authentication, `/users/{mailbox}` Graph calls, and an authoritative check that
-the interactive user is allowed to operate on that mailbox. That is a different
-architecture rather than a permission-only change.
+the interactive user is allowed to operate on that mailbox. The current design is
+chosen for it's smaller and well-defined threat scope.
+
+## Architecture alternative assessment
+
+Internal documentation describes the preference for Resource Specific Consent via
+Exhange RBAC roles. The architectural and security differences between this model and the model used within this tool are defined below:
+
+| Security property | Delegated NAA and direct Graph | Exchange RBAC and confidential backend |
+| --- | --- | --- |
+| Mailbox population boundary | Signed-in user's delegated mailbox access; no OLHelper-specific server-side mailbox subset | Exchange-enforced scope to configured mailboxes |
+| Token location | Short-lived delegated token enters approved WebView memory | App token remains in the backend |
+| Standing privilege | Requires an approved user and interactive sign-in | Service identity can act without user presence until disabled |
+| Compromise blast radius | Active user and mailboxes that user can access | Every mailbox in the application's RBAC scope |
+| Actor-to-mailbox binding | Naturally derived from the signed-in user and `/me` | Backend must prevent a confused deputy and derive the target mailbox authoritatively |
+| Added attack surface | Static executable origin and browser dependencies | Public API, service identity, credential/managed identity, authorization layer, hosting, monitoring, and data-handling boundary |
+| Central policy and auditing | Relies primarily on Entra, Graph, Exchange, release, and user confirmation evidence | Can add centralized policy enforcement and application audit events |
+
+For OLHelper's interactive, user-owned-mailbox workflow, the current design is
+assessed as lower in aggregate implementation complexity, standing privilege,
+cross-user authority, and confused-deputy risk, provided the origin, release,
+assignment, consent, and Conditional Access controls in this document are
+implemented. This is a contextual-based architecture decision rather than a claim that browser-held delegated tokens are intrinsically safer.
+
 
 ## Data inventory and minimization
 
@@ -72,10 +93,22 @@ user-agent information; they must not contain mailbox data.
   IndexedDB, cookies, URLs, application logs, or telemetry.
 - A token is attached only by the central Graph client and only to an allowed
   `https://graph.microsoft.com/v1.0` request.
-- JavaScript cache state is lost when the WebView process is destroyed. The
-  application does not claim that closing a pane immediately clears account or
-  token state independently maintained by Outlook, NAA, MSAL, Windows Web
-  Account Manager, or another broker.
+- After every completed Graph workflow, including status checks and failed
+  mutations, OLHelper disables further mailbox actions and automatically
+  navigates within 10 seconds to a static session-ended document that loads no
+  Office.js, MSAL, or application JavaScript. An explicit **End secure session**
+  control performs the same navigation immediately. Session termination is
+  disabled while a Graph workflow is active so it cannot interrupt a
+  multi-request folder, rule, or message operation.
+- Replacing the authenticated task-pane document destroys its JavaScript
+  context and makes its memory-only MSAL cache unavailable without requiring
+  Outlook to close. The application does not claim cryptographic process-memory
+  zeroization or clearing of account or token state independently maintained by
+  Outlook, NAA, Windows Web Account Manager, or another broker.
+- The UI-less Check Status command runs in a manifest-declared short-lifetime
+  runtime. Before signaling `event.completed()`, it releases OLHelper's
+  reference to the MSAL instance so the memory cache is eligible for collection;
+  Outlook controls final runtime destruction.
 - Access-token lifetime is controlled by Microsoft Entra ID. OLHelper does not
   request a custom lifetime and does not retain an application timer-based copy.
 - Memory-only caching reduces persistence but does not protect a token from
@@ -86,11 +119,18 @@ user-agent information; they must not contain mailbox data.
 ### Mailbox operation boundaries
 
 - The Graph client accepts only the exact endpoint shapes used for OLHelper
-  folder, message-move, Inbox-scan, and Inbox-rule operations. It rejects
-  `/users`, `/me/drive`, Graph beta, alternate origins, credentials, fragments,
-  and other Graph paths.
-- Validated absolute Graph v1 pagination links remain subject to the same path
-  allowlist.
+  folder, message-move, Inbox-scan, and Inbox-rule operations. It validates the
+  HTTP method, exact query names and values, expected JSON body fields and
+  values, and request options before obtaining a token.
+- It rejects `/users`, `/me/drive`, Graph beta, alternate origins, credentials,
+  fragments, unsupported headers or request options, broader `$select` values,
+  unexpected filters, and unrelated mutation bodies.
+- Validated absolute Graph v1 pagination links remain subject to the same
+  method, path, field-selection, and pagination-parameter contract.
+- Opaque folder and rule IDs are valid only inside approved path families.
+  Semantic ownership and parent/target relationships are enforced by the
+  folder and managed-rule modules; the central client cannot infer an opaque
+  resource ID's Exchange parent from the URL alone.
 - Folder, rule, message, and Tracking ID values are URL encoded.
 - Inbox scans request only `id,subject`, use deterministic newest-first order,
   and stop after 250 messages.
@@ -108,6 +148,8 @@ user-agent information; they must not contain mailbox data.
   disables every action, reports why, and reloads the pane.
 - Action controls start disabled and remain fail-closed if item-change
   protection cannot be registered.
+- Task-pane initialization verifies that Office reports the Outlook host before
+  enabling any action.
 
 ### Managed-rule ownership
 
@@ -145,10 +187,11 @@ A colliding or user-altered rule is rejected rather than adopted or modified.
 
 ## Required tenant and operational controls
 
-These controls are deployment requirements; application code cannot enforce
-them:
+These controls are deployment requirements that application code cannot enforce 
+directly, and are expected to be enforced at time of publication for the defined
+security model:
 
-1. Use a single-tenant Entra registration with only the two documented Graph
+1. Single-tenant Entra registration with only the two documented Graph
    delegated scopes.
 2. Require assignment on the enterprise application and assign only approved
    pilot or production groups.
@@ -158,12 +201,11 @@ them:
    contributors, repository administrators, and deployment-environment
    approvers to named accountable owners.
 5. Apply Conditional Access appropriate to the user population after report-only
-   validation. Do not claim token-protection support for this NAA flow without
-   explicit platform confirmation and pilot evidence.
-6. Protect the release branch; require current CI, code-owner review, secret
+   validation. 
+6. Release branch protection: require current CI, code-owner review, secret
    scanning, and approval on the protected deployment environment.
-7. Keep production host origin, tenant ID, and client ID in protected deployment
-   configuration. Keep the deployment token secret and rotate it on owner,
+7. Production host origin, tenant ID, and client ID kept in protected deployment
+   configuration. Deployment token secret rotated on owner,
    exposure, or incident events.
 8. Review assignments, delegated grants, app owners, repository owners, hosting
    roles, and production dependencies on a documented schedule.
@@ -173,16 +215,15 @@ them:
 
 ## Security release gates
 
-Before any non-synthetic mailbox pilot or production expansion:
+Pending actions prior to official release:
 
-1. Obtain approval for `Mail.ReadWrite` and `MailboxSettings.ReadWrite`, using
+1. Approval for `Mail.ReadWrite` and `MailboxSettings.ReadWrite`, using
    the permission-operation matrix above.
-2. Confirm enterprise-app assignment and admin-consent configuration.
-3. Confirm the production origin and NAA broker redirect URI are exact and
-   controlled.
-4. Pass type checking, tests, production/full dependency audits, production
+2. Enterprise-app assignment and admin-consent approval.
+3. Confirmed production origin and NAA broker redirect URI.
+4. Passes type checking, tests, production/full dependency audits, production
    build, and unified-manifest validation.
-5. Confirm deployed CSP and security headers from the production origin.
+5. Confirmed CSP and security headers from the production origin.
 6. Exercise negative cases: malformed IDs, prefix overlap, renamed rules,
    changed selection after confirmation, partial sweep, Graph throttling, and
    rollback failure.
@@ -193,22 +234,20 @@ Before any non-synthetic mailbox pilot or production expansion:
 ## Residual risks requiring acceptance
 
 - A delegated `Mail.ReadWrite` token can access more of the signed-in user's
-  mailbox than OLHelper intentionally uses. No client-side check narrows that
-  OAuth authority.
+  mailbox than OLHelper intentionally uses. No client-side check can narrows that
+  OAuth authority. Existing mitigations heavily restrict the tokens local availabilty, but do not negate the risk associated with a stolen token.
 - Compromise of the static origin, a runtime dependency, an approved release, or
   active WebView JavaScript could expose tokens and mailbox data within the
-  delegated scopes.
-- Native Exchange `subjectContains` rules are not numeric-boundary-aware. A
-  shorter case ID can overlap a longer collaboration ID. Client-side sweeps are
-  boundary-safe, but cannot prevent or reverse every native-rule move.
+  delegated scopes. Existing mitigations are designed to minimize any supply-chain
+  risks or vulnerabilities being introduced.
 - Graph provides no transaction across folders, messages, and rules. OLHelper
   sequences operations, attempts limited rollback, reports partial success, and
-  offers Repair, but rollback is not guaranteed.
+  offers Repair, but rollback is not guaranteed. Existing validation checks are designed to minimize the probability of broken routing.
 - The 250-message Inbox scan is intentionally bounded and may not move older
-  matching mail.
-- Revocation, assignment removal, and WebView closure may not invalidate every
-  already-issued token immediately; containment must include session/token
-  revocation according to tenant procedures.
+  matching mail. This introduces the possibility of missed email matches for the sake of avoiding full mailbox scans and reduced PII exposure potential.
+- The delegated design has no server-enforced OLHelper-folder boundary. Exchange
+  RBAC could provide a mailbox-population boundary, but would introduce a
+  continuously privileged service identity and backend compromise surface.
 
 ## Emergency containment
 

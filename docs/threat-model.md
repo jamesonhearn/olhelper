@@ -49,6 +49,51 @@ The Azure Static Web Apps data path ends when static assets are delivered. Graph
 tokens and Graph responses travel between the WebView and Microsoft services;
 they are not proxied through the static host.
 
+## Threat Modeling Portal submission alignment
+
+The authoritative review record must be created in Threat Model Copilot (TMC)
+and published to the Threat Modeling Portal. This Markdown document is the
+design input, reviewer aid, and durable repository evidence; it does not replace
+the portal-native model or the answers recorded in TMC.
+
+Prepare the submission as follows:
+
+1. Ensure the OLHelper Service Tree entry and accountable roles are current.
+   Current TMC guidance permits Security Champion, Dev Owner, PM Owner, or
+   Service Admin roles to initiate a review.
+2. In [Threat Model Copilot](https://ai.security.azure/vnext), create a new
+   iteration with a detailed title, description, and the applicable review team.
+3. Create the following scenarios, each with its own data-flow diagram:
+   - **Interactive mailbox operations:** user confirmation, Outlook/Office.js,
+     WebView, NAA, Graph, Exchange folders/messages, and Inbox rules.
+   - **Identity and administration:** Entra registration, delegated consent,
+     enterprise-app assignment, Conditional Access, ownership, revocation, and
+     incident containment.
+   - **Software delivery:** repository, dependency resolution, CI validation,
+     protected pilot environment, Static Web Apps, unified app package, and
+     Outlook loading the approved origin.
+4. Reproduce the components, external interactors, data flows, protocols,
+   assets, and trust boundaries in this document on the TMC canvas. Draw
+   executable-content delivery separately from mailbox-data flow and show that
+   OLHelper has no application data store or backend.
+5. Build the diagrams directly in TMC or import a `.tm7` file from the Microsoft
+   Threat Modeling Tool. The portal/TMC history is the source of truth for the
+   submitted model.
+6. Run analysis and answer every generated question. Skip only inapplicable
+   questions and record a specific justification in TMC.
+7. Satisfy the TMC validation gates and use **Notify Review Team**. The security
+   review team completes the asynchronous review and publishes accepted results
+   and generated work items to the Threat Modeling Portal and Azure DevOps.
+8. Triage every published work item, close inapplicable findings only with an
+   auditable justification, and remediate applicable findings under the SDL Bug
+   Bar. Repeat the review for the triggers below and any applicable recurring
+   S360 cadence.
+
+Portal scenario descriptions should link or attach this document, the reviewed
+architecture diagram, permission-operation matrix, release evidence, tenant
+control evidence, and the risk decision. Responses must be entered in TMC rather
+than supplied only through email, Word, or this repository document.
+
 ## Assets
 
 | Asset | Security objective |
@@ -121,7 +166,34 @@ they are not proxied through the static host.
 
 The central client rejects every other Graph path. This is defense in depth
 against programming errors and confused-deputy behavior, not a reduction in
-delegated permission authority.
+delegated permission authority. Because Graph resource IDs are opaque, the
+client validates their path position and the complete request shape but cannot
+derive folder ancestry or rule ownership from an ID alone; the folder and rule
+modules enforce those semantic relationships.
+
+## Alternative architecture and decision
+
+| Risk dimension | Delegated NAA design | Exchange RBAC backend |
+| --- | --- | --- |
+| Server-enforced mailbox scope | No OLHelper-specific subset; authority follows the signed-in user | Explicit Exchange management scope |
+| Token exposure | Delegated token is available to trusted WebView JavaScript | App token stays in the confidential service |
+| Standing and offline authority | User-present, delegated operation | App identity can operate without user presence |
+| Compromise impact | Active user and mailboxes that user can access | All mailboxes assigned to the app's RBAC scope |
+| Identity binding | `/me` binds the target to the signed-in actor | Backend must authenticate the actor and reject client-selected mailbox substitution |
+| System attack surface | Static origin, WebView, runtime dependencies | Those client risks plus API, service identity, authorization, hosting, monitoring, and backend data handling |
+
+The selected design minimizes standing privilege, cross-user authority,
+credentials, backend exposure, and confused-deputy logic for OLHelper's
+interactive user-owned-mailbox scenario. Its principal tradeoff is that a
+delegated token enters the browser trust boundary and Graph cannot enforce an
+OLHelper-folder-only scope.
+
+Exchange RBAC would be preferred if the approval requirement is a
+server-enforced mailbox population boundary or removal of Graph tokens from the
+WebView. That change requires a confidential service, authoritative
+actor-to-mailbox mapping, `/users/{mailbox}` calls, privacy-safe service
+auditing, and a separate threat review. This decision remains subordinate to an
+internal policy mandate requiring Exchange RBAC.
 
 ## STRIDE analysis
 
@@ -132,19 +204,19 @@ delegated permission authority.
 | TM-03 | Spoofing | Pinned pane displays item A but acts on newly selected item B | Wrong case is changed | Confirmation snapshot contains Outlook ID, Graph ID, and subject; `ItemChanged` disables/reloads; pre-mutation revalidation; fail-closed initialization | Host event failure outside documented behavior |
 | TM-04 | Tampering | User-created rule copies an OLHelper display name | Unrelated rule is retargeted or deleted | Full condition/exception/action/state fingerprint; exact ID in name; reject collisions and modified rules | Exchange may add future harmless defaults that require compatibility updates |
 | TM-05 | Tampering | Malformed Tracking ID or folder name alters routing | Misrouting or unsafe resource selection | Canonical marker, 16–19 digits, numeric boundary, URL encoding, ambiguity rejection, tests | Native rule prefix overlap remains |
-| TM-06 | Tampering | Pagination or caller supplies an alternate URL | Bearer token sent to attacker or broader Graph API | Exact HTTPS Graph origin, v1 path and endpoint-shape allowlist, no credentials/fragments | Same-origin malicious runtime code can bypass application helpers |
+| TM-06 | Tampering | Pagination or caller supplies an alternate method, URL, query, header, or body | Bearer token sent to attacker or broader Graph operation | Validation before token acquisition; exact HTTPS Graph origin; method/path/query/body contract; expected field selections and filters; supported pagination only; no caller headers, credentials, fragments, or unrelated request options | Same-origin malicious replacement code can bypass application helpers |
 | TM-07 | Tampering | Dependency, action, workflow, or deployment token is compromised | Malicious JavaScript reaches every active user | Lockfile install, audit gates, Dependabot, dependency review, CodeQL, immutable action SHAs, protected environment, restricted owners, release hashes | Upstream zero-day or authorized malicious change |
 | TM-08 | Repudiation | A mailbox mutation cannot be attributed | Weak incident reconstruction | User confirmation, tenant sign-in/audit logs, Graph/Exchange audit capabilities, release/workflow records | No application telemetry by design; evidence depends on tenant retention |
-| TM-09 | Information disclosure | Token persists in browser storage or logs | Mailbox access until expiry/revocation | MSAL memory-only cache; no application persistence; prohibited sensitive logging; generic raw-error suppression | Broker-controlled state and active-memory exposure |
+| TM-09 | Information disclosure | Token persists in browser storage, logs, an idle authenticated task pane, or a completed command runtime | Mailbox access until expiry/revocation | MSAL memory-only cache; no application persistence; prohibited sensitive logging; generic raw-error suppression; session termination disabled during active workflows; automatic navigation to a script-free document within 10 seconds after task-pane workflows; short-lifetime command runtime releases its MSAL reference before `event.completed()` | Broker-controlled state, active-operation memory exposure, host-controlled command-runtime destruction, and no cryptographic process-memory zeroization |
 | TM-10 | Information disclosure | XSS or malicious hosted JavaScript reads tokens/Graph data | Mailbox disclosure within delegated scopes | Strict CSP, no inline/eval script requirement, constrained network destinations, reviewed origin, dependency controls | CSP permits Graph and identity because the app requires them; malicious same-origin code can use those destinations |
 | TM-11 | Information disclosure | Overbroad queries retrieve unrelated mailbox content | Unnecessary privacy exposure | No body/attachment/recipient fields; `id,subject` Inbox selection; 250 cap; rule summary then candidate detail | Subjects of nonmatching recent Inbox messages are processed transiently |
-| TM-12 | Information disclosure | Raw Graph or broker errors appear in UI/support artifacts | Tokens, identifiers, or diagnostic context disclosed | Graph errors mapped to safe fields; long or token/broker-like errors replaced; logging prohibition | New short sensitive error formats may evade heuristics |
+| TM-12 | Information disclosure | Raw Graph or broker errors appear in UI/support artifacts | Tokens, identifiers, or diagnostic context disclosed | Graph client retains only HTTP status; long or token/broker-like errors are replaced; logging prohibition | New short sensitive non-Graph error formats may evade heuristics |
 | TM-13 | Denial of service | Graph throttling, quota, large mailbox, or malformed state blocks workflow | Case routing unavailable or incomplete | Bounded scan, error surfacing, retry guidance, idempotent discovery, Repair action | No automatic throttling backoff or offline operation |
 | TM-14 | Denial of service | Native rule quota is exhausted | Persistent routing cannot be created | Graph error surfaced without success-shaped fallback; existing state preserved where possible | User/admin remediation is required |
 | TM-15 | Elevation of privilege | Unassigned user launches app or consent expands audience | Restricted mailbox capability reaches unintended users | Enterprise app requires assignment, controlled admin consent, restricted user consent, CA, periodic grant review | Incorrect group membership or policy exception |
-| TM-16 | Elevation of privilege | Stolen token is used for mailbox APIs OLHelper never calls | Broader mailbox access than product behavior | Short-lived delegated token, CA/session controls, memory-only cache, incident revocation | OAuth scope is still `Mail.ReadWrite`; client allowlist does not bind a stolen token |
+| TM-16 | Elevation of privilege | Stolen token is used for mailbox APIs OLHelper never calls | Broader mailbox access than product behavior | Short-lived delegated token, CA/session controls, memory-only cache, bounded authenticated-document lifetime, incident revocation | OAuth scope is still `Mail.ReadWrite`; client allowlist does not bind a stolen token |
 | TM-17 | Elevation of privilege | App-only credentials are introduced into browser code | Tenant-scale mailbox access | Architecture prohibits secrets, certificates, managed identity tokens, app permissions, and `/users` endpoints in the frontend | Future architecture changes require a new threat review |
-| TM-18 | Integrity/availability | Multi-step Graph operation fails midway or rollback fails | Folder/rule/message state diverges | Safe sequencing, limited rollback, precise partial-success reporting, status and Repair | Graph has no cross-resource transaction; rollback is not guaranteed |
+| TM-18 | Integrity/availability | Multi-step Graph operation fails midway, the host terminates the runtime, or rollback fails | Folder/rule/message state diverges | Safe sequencing; session-end control disabled during active operations; limited rollback; precise partial-success reporting; status and Repair | Graph has no cross-resource transaction; Outlook or endpoint termination remains possible; rollback is not guaranteed |
 
 ## Priority abuse cases
 
@@ -235,5 +307,9 @@ Production approval must explicitly accept the residual breadth of delegated
 `Mail.ReadWrite`, active-origin/token compromise risk, native-rule prefix
 overlap, bounded Inbox history, and nontransactional Graph behavior. If those
 risks are unacceptable, the appropriate response is an architectural change
-such as a dedicated mailbox or a confidential service with independently
-approved mailbox scoping—not a claim that browser-side checks narrow OAuth.
+such as a dedicated mailbox or a confidential Exchange-RBAC service with
+independently approved mailbox scoping—not a claim that browser-side checks
+narrow OAuth. For the current interactive scope, delegated NAA is selected
+because it has lower standing privilege and aggregate service complexity; the
+decision does not supersede an internal policy requirement to use Exchange
+RBAC.

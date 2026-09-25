@@ -4,6 +4,7 @@ import {
   caseFolderName,
   extractTrackingId,
 } from "../cases/tracking-id";
+import { releaseGraphAuthenticationContext } from "../auth/auth";
 import { getSafeErrorMessage } from "../security/safe-error";
 
 const STATUS_NOTIFICATION_KEY = "olhelper-case-status";
@@ -70,6 +71,7 @@ async function checkCaseStatusCommand(
       console.error("OLHelper could not display the case status result.");
     }
   } finally {
+    releaseGraphAuthenticationContext();
     event.completed();
   }
 }
