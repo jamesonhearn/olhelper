@@ -197,7 +197,7 @@ export async function ensureCaseRule(
         sequence,
         isEnabled: false,
         conditions: {
-          subjectContains: [`TrackingID#${trackingId}`],
+          subjectContains: [`${trackingId}`],
         },
         actions: {
           moveToFolder: folderId,
@@ -233,7 +233,7 @@ export async function updateCaseRuleTarget(
       body: JSON.stringify({
         isEnabled: false,
         conditions: {
-          subjectContains: [`TrackingID#${trackingId}`],
+          subjectContains: [`${trackingId}`],
         },
         actions: {
           moveToFolder: folderId,
