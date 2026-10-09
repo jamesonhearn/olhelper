@@ -37,7 +37,7 @@ async function getMsal(): Promise<IPublicClientApplication> {
 
     if (!clientId || !tenantId) {
       throw new Error(
-        "OLHelper authentication is not configured. Set OLHELPER_CLIENT_ID and OLHELPER_TENANT_ID in .env.local.",
+        "OLHelper authentication is not configured for this deployment.",
       );
     }
 

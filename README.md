@@ -24,65 +24,44 @@ rather than choosing between multiple folders for the same Tracking ID.
 ## Configuration responsibilities
 
 - `package.json` declares the browser/runtime dependencies and the commands used
-  to build, validate, serve, and sideload the add-in.
+  to build, test, validate, audit, and package the add-in.
 - `appPackage/manifest.json` is the unified Microsoft 365 manifest that tells
-  Outlook when and where to display OLHelper. Its local URLs point to the
-  Webpack HTTPS server at `https://localhost:3000`; local and pilot package
-  generation inject the matching Entra client ID.
+  Outlook when and where to display OLHelper. It is a template whose placeholder
+  origin and Entra client ID are replaced during hosted package generation.
 - `webpack.config.js` compiles the TypeScript and CSS in `src/`, creates the
-  task-pane and command HTML pages, copies icons, injects Entra identifiers, and
-  serves the resulting files over trusted local HTTPS.
-- `.env.local` contains the sandbox Entra application and tenant IDs used by
-  Webpack. It is intentionally excluded from Git. These identifiers are not
-  client secrets, but are excluded to ensure a fully PII-stripped public repo.
+  task-pane and command HTML pages, copies icons, and injects Entra identifiers.
 
-## Locally Hosted Sandbox Entra Application Testing
-
-Register a single-tenant SPA in the Microsoft 365 developer sandbox:
-
-1. Add the SPA redirect URI `brk-multihub://localhost:3000`.
-2. Add delegated Microsoft Graph permissions:
-   - `Mail.ReadWrite`
-   - `MailboxSettings.ReadWrite`
-3. Copy `.env.example` to `.env.local` and replace both placeholder IDs.
-
-## Local commands
+## Validation commands
 
 ```powershell
 npm install
 npm run typecheck
+npm test
 npm run build
 npm run validate
-npm start
-```
-
-`npm start` creates `appPackage/build/olhelper-local.zip`, starts the HTTPS
-development server, and attempts to sideload the unified package into Outlook.
-Use `npm run stop` to stop the debugging session.
-For manual sideloading, create and upload the local package first, then run only
-the local server:
-
-```powershell
-npm run manifest:local
-# Upload appPackage/build/olhelper-local.zip through the Teams app store.
-npm run dev-server
+npm run security:audit
+npm run security:audit:all
 ```
 
 The generated files are written to `dist/`. Do not edit that directory.
 
-## Local and production URLs
+## Hosted package generation
 
-The checked-in manifest is a locally valid template with a placeholder Entra
-client ID. `npm run manifest:local` reads the real ID from `.env.local`. For
-organizational deployment, every `https://localhost:3000` URL is replaced with
-the approved static hosting origin and the protected environment supplies the
-Entra client ID. The registration must include this trusted-broker redirect:
+The checked-in manifest is a deployment template with placeholder origin and
+Entra client ID values. The protected deployment environment supplies
+`OLHELPER_HOST_ORIGIN`, `OLHELPER_CLIENT_ID`, and `OLHELPER_TENANT_ID`. Package
+generation replaces every template URL with the approved static hosting origin.
+The Entra registration must include this trusted-broker redirect:
 
 ```text
 brk-multihub://<production-origin>
 ```
 
 The broker redirect contains only the origin, without a path.
+
+Local serving, certificate generation, and automated Outlook sideloading are
+intentionally not part of the maintained toolchain. Test changes through the
+hosted pilot deployment.
 
 ## Azure Hosted Pilot
 

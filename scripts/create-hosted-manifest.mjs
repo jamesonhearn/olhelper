@@ -2,24 +2,12 @@ import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import AdmZip from "adm-zip";
-import dotenv from "dotenv";
 
-const isLocal = process.argv[2] === "--local";
-
-if (process.argv.length > (isLocal ? 3 : 2)) {
-  throw new Error("Only the optional --local mode is supported.");
+if (process.argv.length !== 2) {
+  throw new Error("Command-line arguments are not supported.");
 }
 
-if (isLocal) {
-  dotenv.config({
-    path: path.resolve(".env.local"),
-    quiet: true,
-  });
-}
-
-const originArgument = isLocal
-  ? "https://localhost:3000"
-  : process.env.OLHELPER_HOST_ORIGIN;
+const originArgument = process.env.OLHELPER_HOST_ORIGIN;
 const clientId = process.env.OLHELPER_CLIENT_ID;
 
 if (!originArgument) {
@@ -54,12 +42,9 @@ if (
 const origin = originUrl.origin;
 const sourcePath = path.resolve("appPackage/manifest.json");
 const buildRoot = path.resolve("appPackage/build");
-const outputDirectory = path.join(buildRoot, isLocal ? "local" : "hosted");
+const outputDirectory = path.join(buildRoot, "hosted");
 const outputPath = path.join(outputDirectory, "manifest.json");
-const packagePath = path.join(
-  buildRoot,
-  isLocal ? "olhelper-local.zip" : "olhelper-pilot.zip",
-);
+const packagePath = path.join(buildRoot, "olhelper-pilot.zip");
 const source = await readFile(sourcePath, "utf8");
 const hosted = source
   .replaceAll("https://localhost:3000", origin)
@@ -67,10 +52,9 @@ const hosted = source
   .replaceAll("00000000-0000-0000-0000-000000000000", clientId);
 
 if (
-  !isLocal &&
-  (hosted === source ||
-    hosted.includes("https://localhost:3000") ||
-    hosted.includes("localhost:3000"))
+  hosted === source ||
+  hosted.includes("https://localhost:3000") ||
+  hosted.includes("localhost:3000")
 ) {
   throw new Error("The local manifest URLs could not be replaced.");
 }
@@ -98,6 +82,6 @@ packageArchive.addLocalFile(outputPath);
 packageArchive.addLocalFolder(path.join(outputDirectory, "assets"), "assets");
 packageArchive.writeZip(packagePath);
 
-console.log(`${isLocal ? "Local" : "Hosted"} manifest: ${outputPath}`);
+console.log(`Hosted manifest: ${outputPath}`);
 console.log(`App package: ${packagePath}`);
 console.log(`NAA broker redirect: brk-multihub://${originUrl.host}`);
