@@ -124,6 +124,17 @@ test("keeps mailbox actions disabled until Office initialization completes", () 
   }
 });
 
+test("requires checked case state before enabling Track", () => {
+  assert.match(script, /let currentCaseStatus: CaseStatus \| null = null/);
+  assert.match(
+    script,
+    /getAvailableCaseActions\(currentCaseStatus\)\.includes\(action\)/,
+  );
+  assert.match(script, /getButton\("track-case"\)\.hidden = location !== "untracked"/);
+  assert.match(script, /restoreActionAvailability\(\)/);
+  assert.match(script, /clearCaseStatus\("Case status could not be determined\."\)/);
+});
+
 test("does not display raw token or broker telemetry errors", () => {
   assert.match(script, /getSafeErrorMessage/);
 });

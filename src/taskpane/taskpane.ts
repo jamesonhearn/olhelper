@@ -4,30 +4,24 @@ import {
   getCaseStatus,
   reopenCase,
   repairCaseRouting,
+  type CaseStatus,
 } from "../cases/case-workflows";
-import { describeCaseStatus } from "../cases/case-status";
+import {
+  describeCaseStatus,
+  getAvailableCaseActions,
+  type CaseAction,
+} from "../cases/case-status";
 import { trackSelectedCase } from "../cases/track-case";
 import {
   caseFolderName,
   extractTrackingId,
 } from "../cases/tracking-id";
 import {
-  type CaseLocation,
-} from "../graph/folders";
-import {
   assertSelectedMessage,
   getSelectedMessage,
   type SelectedMessage,
 } from "../outlook/selected-message";
 import { getSafeErrorMessage } from "../security/safe-error";
-
-type CaseAction = "track" | "archive" | "reopen" | "repair";
-type RoutingState =
-  | "enabled"
-  | "disabled"
-  | "missing"
-  | "mistargeted"
-  | "not-applicable";
 
 interface ActionDefinition {
   confirmation: string;
@@ -40,6 +34,7 @@ let confirmationTrigger: HTMLButtonElement | null = null;
 let sessionEndTimer: number | undefined;
 let secureOperationActive = false;
 let mutationOperationActive = false;
+let currentCaseStatus: CaseStatus | null = null;
 
 Office.onReady(async (info) => {
   const endSessionButton = getButton("end-session");
@@ -142,7 +137,7 @@ Office.onReady(async (info) => {
         setStatus(
           `Case ${result.trackingId} is active and the selected message was moved.${sweptNote}`,
         );
-        showActionsForState("active", "enabled");
+        showActionsForState({ location: "active", routing: "enabled" });
       },
     },
     archive: {
@@ -155,7 +150,10 @@ Office.onReady(async (info) => {
         setStatus(
           `Case ${trackingId} is archived. New matching messages will remain in the Inbox.`,
         );
-        showActionsForState("archived", "not-applicable");
+        showActionsForState({
+          location: "archived",
+          routing: "not-applicable",
+        });
       },
     },
     reopen: {
@@ -166,7 +164,7 @@ Office.onReady(async (info) => {
       run: async () => {
         await reopenCase(trackingId);
         setStatus(`Case ${trackingId} is active and routing is enabled.`);
-        showActionsForState("active", "enabled");
+        showActionsForState({ location: "active", routing: "enabled" });
       },
     },
     repair: {
@@ -177,7 +175,7 @@ Office.onReady(async (info) => {
       run: async () => {
         await repairCaseRouting(trackingId);
         setStatus(`Routing for case ${trackingId} is enabled.`);
-        showActionsForState("active", "enabled");
+        showActionsForState({ location: "active", routing: "enabled" });
       },
     },
   };
@@ -186,6 +184,14 @@ Office.onReady(async (info) => {
     const actionButton = getButton(`${action}-case`);
 
     actionButton.addEventListener("click", () => {
+      if (!getAvailableCaseActions(currentCaseStatus).includes(action)) {
+        setStatus(
+          "Check case status before selecting a mailbox-changing action.",
+        );
+        checkStatusButton.focus();
+        return;
+      }
+
       pendingAction = action;
       confirmationTrigger = actionButton;
       const definition = definitions[action];
@@ -215,6 +221,15 @@ Office.onReady(async (info) => {
     const action = pendingAction;
     const definition = definitions[action];
 
+    if (!getAvailableCaseActions(currentCaseStatus).includes(action)) {
+      pendingAction = null;
+      closeConfirmation();
+      setStatus(
+        "The action is not valid for the last checked case status. Check status again.",
+      );
+      return;
+    }
+
     try {
       assertSelectedMessage(selectedMessage);
       beginSecureOperation(true);
@@ -233,9 +248,9 @@ Office.onReady(async (info) => {
 
       try {
         const state = await getCaseStatus(trackingId);
-        showActionsForState(state.location, state.routing);
+        showActionsForState(state);
       } catch {
-        showActionsForState("untracked");
+        clearCaseStatus("Case status could not be refreshed.");
       }
 
       setStatus(errorMessage);
@@ -243,28 +258,40 @@ Office.onReady(async (info) => {
     }
   });
 
-  checkStatusButton.addEventListener("click", async () => {
+  const refreshCaseStatus = async (): Promise<CaseStatus | null> => {
     beginSecureOperation(false);
+    clearCaseStatus("Checking case status...");
     checkStatusButton.disabled = true;
     setStatus("Checking case status...");
 
     try {
       const state = await getCaseStatus(trackingId);
-      showActionsForState(state.location, state.routing);
+      showActionsForState(state);
       setStatus(describeCaseStatus(trackingId, state));
+      return state;
     } catch (error) {
+      clearCaseStatus("Case status could not be determined.");
       setStatus(`Unable to check case status: ${getSafeErrorMessage(error)}`);
+      return null;
     } finally {
       finishReadOnlyOperation();
     }
+  };
+
+  checkStatusButton.addEventListener("click", () => {
+    void refreshCaseStatus();
   });
 
   const requestedAction = getRequestedAction();
 
-  setActionButtonsDisabled(false);
+  restoreActionAvailability();
 
   if (requestedAction) {
-    getButton(`${requestedAction}-case`).click();
+    const state = await refreshCaseStatus();
+
+    if (state && getAvailableCaseActions(state).includes(requestedAction)) {
+      getButton(`${requestedAction}-case`).click();
+    }
   }
 });
 
@@ -301,9 +328,11 @@ function registerItemChangedProtection(): Promise<void> {
 }
 
 function showActionsForState(
-  location: CaseLocation,
-  routing: RoutingState = "not-applicable",
+  state: CaseStatus,
 ): void {
+  currentCaseStatus = state;
+  const { location, routing } = state;
+
   document.getElementById("case-state")!.textContent =
     location === "untracked"
       ? "Status: Not tracked"
@@ -317,16 +346,25 @@ function showActionsForState(
                 : "Needs repair"
           }`;
 
-  getButton("track-case").hidden = location === "archived";
+  getButton("track-case").hidden = location !== "untracked";
   getButton("archive-case").hidden = location !== "active";
   getButton("repair-case").hidden =
     location !== "active" || routing === "enabled";
   getButton("reopen-case").hidden = location !== "archived";
 }
 
+function clearCaseStatus(message = "Case status has not been checked."): void {
+  currentCaseStatus = null;
+  document.getElementById("case-state")!.textContent = message;
+  getButton("track-case").hidden = false;
+  getButton("archive-case").hidden = true;
+  getButton("repair-case").hidden = true;
+  getButton("reopen-case").hidden = true;
+}
+
 function closeConfirmation(): void {
   document.getElementById("confirmation")!.hidden = true;
-  setActionButtonsDisabled(false);
+  restoreActionAvailability();
   getButton("confirm-action").disabled = false;
   getButton("cancel-action").disabled = false;
 
@@ -352,6 +390,22 @@ function setActionButtonsDisabled(disabled: boolean): void {
 
 function disableAllActions(): void {
   setActionButtonsDisabled(true);
+}
+
+function restoreActionAvailability(): void {
+  if (secureOperationActive) {
+    disableAllActions();
+    return;
+  }
+
+  const availableActions = new Set(
+    getAvailableCaseActions(currentCaseStatus),
+  );
+  getButton("check-status").disabled = false;
+
+  for (const action of ["track", "archive", "reopen", "repair"] as const) {
+    getButton(`${action}-case`).disabled = !availableActions.has(action);
+  }
 }
 
 function scheduleSecureSessionEnd(): void {
@@ -412,7 +466,7 @@ function beginSecureOperation(isMutation: boolean): void {
 function finishReadOnlyOperation(): void {
   secureOperationActive = false;
   mutationOperationActive = false;
-  setActionButtonsDisabled(false);
+  restoreActionAvailability();
   getButton("end-session").disabled = false;
 }
 

@@ -225,6 +225,19 @@ test("does not track a message into an archived case", async () => {
   assert.deepEqual(operations.calls, ["get-state"]);
 });
 
+test("does not recreate routing for an active case", async () => {
+  const operations = createOperations({
+    location: "active",
+    folder: { id: "active-folder", displayName: "CASE-1" },
+  });
+
+  await assert.rejects(
+    trackCase("CASE-1", "message-1", operations),
+    /already active/,
+  );
+  assert.deepEqual(operations.calls, ["get-state"]);
+});
+
 test("archives an active case after disabling its rule", async () => {
   const existingRule: MessageRule = {
     id: "rule-1",

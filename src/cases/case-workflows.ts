@@ -95,14 +95,15 @@ export async function trackCase(
 ): Promise<TrackCaseResult> {
   const state = await operations.getFolderState(trackingId);
 
-  if (state.location === "archived") {
+  if (state.location !== "untracked") {
     throw new Error(
-      `Case ${trackingId} is archived. Reopen it before tracking new messages.`,
+      state.location === "archived"
+        ? `Case ${trackingId} is archived. Reopen it before tracking new messages.`
+        : `Case ${trackingId} is already active. Check its current routing status instead of tracking it again.`,
     );
   }
 
-  const folder =
-    state.folder ?? (await operations.ensureActiveFolder(trackingId));
+  const folder = await operations.ensureActiveFolder(trackingId);
   const rule = await operations.ensureRule(trackingId, folder.id);
   const sweep: TrackCaseResult["sweep"] = {
     scannedMessageCount: 0,

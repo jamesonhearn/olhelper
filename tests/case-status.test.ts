@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { describeCaseStatus } from "../src/cases/case-status";
+import {
+  describeCaseStatus,
+  getAvailableCaseActions,
+} from "../src/cases/case-status";
 
 const trackingId = "1234567890123456";
 
@@ -32,5 +35,37 @@ test("describes each user-visible case state", () => {
       routing: "mistargeted",
     }),
     `Case ${trackingId} is active, but routing needs repair.`,
+  );
+});
+
+test("offers mutations only after status establishes the case state", () => {
+  assert.deepEqual(getAvailableCaseActions(null), []);
+  assert.deepEqual(
+    getAvailableCaseActions({
+      location: "untracked",
+      routing: "not-applicable",
+    }),
+    ["track"],
+  );
+  assert.deepEqual(
+    getAvailableCaseActions({
+      location: "archived",
+      routing: "not-applicable",
+    }),
+    ["reopen"],
+  );
+  assert.deepEqual(
+    getAvailableCaseActions({
+      location: "active",
+      routing: "enabled",
+    }),
+    ["archive"],
+  );
+  assert.deepEqual(
+    getAvailableCaseActions({
+      location: "active",
+      routing: "mistargeted",
+    }),
+    ["archive", "repair"],
   );
 });
