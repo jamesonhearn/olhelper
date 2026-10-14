@@ -48,7 +48,6 @@ jobs:
 
       - name: Generate hosted manifest
         env:
-          OLHELPER_HOST_ORIGIN: ${{ vars.OLHELPER_HOST_ORIGIN }}
           OLHELPER_CLIENT_ID: ${{ vars.OLHELPER_CLIENT_ID }}
         run: npm run manifest:hosted
 
@@ -67,6 +66,9 @@ jobs:
           action: upload
           app_location: dist
           skip_app_build: true
+
+      - name: Verify hosted security headers
+        run: npm run security:verify-hosted
 
       - name: Publish unified app package
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7

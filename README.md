@@ -48,10 +48,12 @@ The generated files are written to `dist/`. Do not edit that directory.
 ## Hosted package generation
 
 The checked-in manifest is a deployment template with placeholder origin and
-Entra client ID values. The protected deployment environment supplies
-`OLHELPER_HOST_ORIGIN`, `OLHELPER_CLIENT_ID`, and `OLHELPER_TENANT_ID`. Package
-generation replaces every template URL with the approved static hosting origin.
-The Entra registration must include this trusted-broker redirect:
+Entra client ID values. Package generation replaces every template URL with the
+repository-pinned Azure Static Web Apps origin. The protected deployment
+environment supplies `OLHELPER_CLIENT_ID` and `OLHELPER_TENANT_ID`. Changing the
+executable origin therefore requires a reviewed source change rather than an
+environment-variable update. The Entra registration must include this
+trusted-broker redirect:
 
 ```text
 brk-multihub://<production-origin>
@@ -74,6 +76,7 @@ See:
 - [Azure Static Web Apps pilot deployment](docs/deploy-azure-static-web-apps.md)
 - [Security architecture and release gates](docs/security.md)
 - [Threat model and Graph permission justification](docs/threat-model.md)
+- [Production readiness checklist](docs/production-readiness-checklist.md)
 
 The deployment workflow generates
 `appPackage/build/olhelper-pilot.zip` for the protected HTTPS origin. The ZIP

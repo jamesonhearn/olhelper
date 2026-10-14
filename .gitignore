@@ -5,3 +5,4 @@ appPackage/build/
 npm-debug.log*
 .DS_Store
 docs/threat-model.md
+docs/production-readiness-checklist.md

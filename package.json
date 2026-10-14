@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "validate": "office-addin-manifest validate appPackage/manifest.json",
     "manifest:hosted": "node scripts/create-hosted-manifest.mjs",
+    "security:verify-hosted": "node scripts/verify-hosted-security.mjs",
     "security:audit": "npm audit --omit=dev --audit-level=high",
     "security:audit:all": "npm audit --audit-level=high"
   },

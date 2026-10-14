@@ -189,6 +189,9 @@ A colliding or user-altered rule is rejected rather than adopted or modified.
 - GitHub Actions are pinned to immutable commit SHAs.
 - The protected pilot workflow builds once, deploys that `dist` output, and
   publishes the matching unified package plus SHA-256 release hashes.
+- After deployment, the workflow verifies the live HTML response against the
+  reviewed CSP and security headers in `staticwebapp.config.json`; drift or
+  incomplete propagation blocks package publication.
 
 ## Required tenant and operational controls
 
@@ -209,9 +212,9 @@ security model:
    validation. 
 6. Release branch protection: require current CI, code-owner review, secret
    scanning, and approval on the protected deployment environment.
-7. Production host origin, tenant ID, and client ID kept in protected deployment
-   configuration. Deployment token secret rotated on owner,
-   exposure, or incident events.
+7. Production host origin pinned in reviewed source; tenant ID and client ID
+   kept in protected deployment configuration. Deployment token secret rotated
+   on owner, exposure, or incident events.
 8. Review assignments, delegated grants, app owners, repository owners, hosting
    roles, and production dependencies on a documented schedule.
 9. Retain release commit, workflow run, package, and release hashes for each
@@ -228,13 +231,21 @@ Pending actions prior to official release:
 3. Confirmed production origin and NAA broker redirect URI.
 4. Passes type checking, tests, production/full dependency audits, production
    build, and unified-manifest validation.
-5. Confirmed CSP and security headers from the production origin.
+5. Automated confirmation that the production origin serves the reviewed CSP
+   and security headers.
 6. Exercise negative cases: malformed IDs, prefix overlap, renamed rules,
    changed selection after confirmation, partial sweep, Graph throttling, and
    rollback failure.
 7. Record primary and backup owners, release approver, grant-review cadence,
    deployment-token rotation, rollback, and enterprise-app disable procedures.
 8. Complete required privacy, accessibility, identity, and security reviews.
+
+The repository defines code owners for release-sensitive workflow, manifest,
+packaging, and security-policy files. The GitHub `main` ruleset must require
+code-owner approval and current required checks, and the `pilot` environment
+must require an independent reviewer with self-review prevention enabled.
+These GitHub-hosted settings remain external controls and must be verified
+before each production release.
 
 ## Residual risks requiring acceptance
 

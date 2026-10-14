@@ -2,19 +2,13 @@ import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import AdmZip from "adm-zip";
+import { approvedOrigin } from "./deployment-config.mjs";
 
 if (process.argv.length !== 2) {
   throw new Error("Command-line arguments are not supported.");
 }
 
-const originArgument = process.env.OLHELPER_HOST_ORIGIN;
 const clientId = process.env.OLHELPER_CLIENT_ID;
-
-if (!originArgument) {
-  throw new Error(
-    "OLHELPER_HOST_ORIGIN must be set to the approved HTTPS deployment origin.",
-  );
-}
 
 if (
   !clientId ||
@@ -26,19 +20,7 @@ if (
   throw new Error("OLHELPER_CLIENT_ID must be set to a non-placeholder GUID.");
 }
 
-const originUrl = new URL(originArgument);
-
-if (
-  originUrl.protocol !== "https:" ||
-  originUrl.username ||
-  originUrl.password ||
-  originUrl.pathname !== "/" ||
-  originUrl.search ||
-  originUrl.hash
-) {
-  throw new Error("The hosted origin must be an HTTPS origin without a path.");
-}
-
+const originUrl = new URL(approvedOrigin);
 const origin = originUrl.origin;
 const sourcePath = path.resolve("appPackage/manifest.json");
 const buildRoot = path.resolve("appPackage/build");

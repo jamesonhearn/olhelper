@@ -1,0 +1,7 @@
+# Release-sensitive files require explicit ownership review.
+/.github/workflows/ @jamesonhearn
+/appPackage/manifest.json @jamesonhearn
+/scripts/ @jamesonhearn
+/staticwebapp.config.json @jamesonhearn
+/docs/security.md @jamesonhearn
+/docs/threat-model.md @jamesonhearn

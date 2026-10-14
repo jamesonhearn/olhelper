@@ -50,7 +50,6 @@ jobs:
 
       - name: Generate hosted manifest
         env:
-          OLHELPER_HOST_ORIGIN: https://olhelper-pilot.example.com
           OLHELPER_CLIENT_ID: 10000000-0000-4000-8000-000000000000
         run: npm run manifest:hosted
 
